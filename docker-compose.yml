@@ -1,0 +1,211 @@
+version: "3.8"
+
+# Deploiement complet sur un VPS (voir DEPLOIEMENT.md pour la procedure pas
+# a pas). Chaque microservice Java est construit a partir du jar deja
+# compile par Maven (voir deployer.sh, qui lance "mvn package" avant de
+# construire les images) : Docker n'a donc pas besoin de telecharger les
+# dependances Maven a chaque build, seulement de packager le jar existant.
+
+networks:
+  myaddictive:
+    driver: bridge
+
+volumes:
+  data_discovery:
+  data_compte:
+  data_media:
+  data_musique:
+  data_live:
+  data_votes:
+  data_boutique:
+  data_paiement:
+  uploads_media:
+
+services:
+
+  discovery-service:
+    build:
+      context: ./discovery-service
+    restart: unless-stopped
+    networks: [myaddictive]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  config-service:
+    build:
+      context: .
+      dockerfile: config-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      EUREKA_URI: http://discovery-service:8761/eureka/
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    networks: [myaddictive]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  gateway-service:
+    build:
+      context: ./gateway-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      CONFIG_SERVER_URL: http://config-service:8888
+      JWT_SECRET: ${JWT_SECRET:?la variable JWT_SECRET doit etre definie dans .env.production}
+    depends_on:
+      config-service:
+        condition: service_healthy
+    ports:
+      - "8090:8090"
+    networks: [myaddictive]
+
+  compte-service:
+    build:
+      context: ./compte-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      CONFIG_SERVER_URL: http://config-service:8888
+      JWT_SECRET: ${JWT_SECRET:?la variable JWT_SECRET doit etre definie dans .env.production}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_MOT_DE_PASSE: ${ADMIN_MOT_DE_PASSE}
+    depends_on:
+      config-service:
+        condition: service_healthy
+    volumes:
+      - data_compte:/app/data
+    networks: [myaddictive]
+
+  media-service:
+    build:
+      context: ./media-service
+    restart: unless-stopped
+    environment:
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      CONFIG_SERVER_URL: http://config-service:8888
+      JWT_SECRET: ${JWT_SECRET}
+      # Chemin relatif au conteneur (voir ConfigurationFichiersStatiques.java) :
+      # chaque conteneur est isole, la convention "racine du projet" utilisee
+      # en local n'a pas de sens ici.
+      APP_UPLOADS_PATH: ./uploads/
+    depends_on:
+      config-service:
+        condition: service_healthy
+    volumes:
+      - data_media:/app/data
+      - uploads_media:/app/uploads
+    networks: [myaddictive]
+
+  musique-service:
+    build:
+      context: ./musique-service
+    restart: unless-stopped
+    environment:
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      CONFIG_SERVER_URL: http://config-service:8888
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      config-service:
+        condition: service_healthy
+    volumes:
+      - data_musique:/app/data
+    networks: [myaddictive]
+
+  live-service:
+    build:
+      context: ./live-service
+    restart: unless-stopped
+    environment:
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      CONFIG_SERVER_URL: http://config-service:8888
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      config-service:
+        condition: service_healthy
+    volumes:
+      - data_live:/app/data
+    networks: [myaddictive]
+
+  votes-service:
+    build:
+      context: ./votes-service
+    restart: unless-stopped
+    environment:
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      CONFIG_SERVER_URL: http://config-service:8888
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      config-service:
+        condition: service_healthy
+    volumes:
+      - data_votes:/app/data
+    networks: [myaddictive]
+
+  boutique-service:
+    build:
+      context: ./boutique-service
+    restart: unless-stopped
+    environment:
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      CONFIG_SERVER_URL: http://config-service:8888
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      config-service:
+        condition: service_healthy
+    volumes:
+      - data_boutique:/app/data
+    networks: [myaddictive]
+
+  paiement-service:
+    build:
+      context: ./paiement-service
+    restart: unless-stopped
+    environment:
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      CONFIG_SERVER_URL: http://config-service:8888
+      JWT_SECRET: ${JWT_SECRET}
+      MTN_MOMO_BASE_URL: ${MTN_MOMO_BASE_URL:-https://sandbox.momodeveloper.mtn.com}
+      MTN_MOMO_SUBSCRIPTION_KEY: ${MTN_MOMO_SUBSCRIPTION_KEY:-}
+      MTN_MOMO_API_USER: ${MTN_MOMO_API_USER:-}
+      MTN_MOMO_API_KEY: ${MTN_MOMO_API_KEY:-}
+      MTN_MOMO_TARGET_ENVIRONMENT: ${MTN_MOMO_TARGET_ENVIRONMENT:-sandbox}
+      MTN_MOMO_CALLBACK_HOST: ${MTN_MOMO_CALLBACK_HOST:-}
+      MOOV_MONEY_API_KEY: ${MOOV_MONEY_API_KEY:-}
+    depends_on:
+      config-service:
+        condition: service_healthy
+    volumes:
+      - data_paiement:/app/data
+    networks: [myaddictive]
+
+  admin-dashboard:
+    build:
+      context: ./admin-dashboard
+      args:
+        VITE_API_BASE_URL: ${URL_PUBLIQUE_API}
+    restart: unless-stopped
+    networks: [myaddictive]
+
+  proxy:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - gateway-service
+      - admin-dashboard
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploiement/nginx-proxy-bootstrap.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploiement/certbot/conf:/etc/letsencrypt:ro
+      - ./deploiement/certbot/www:/var/www/certbot:ro
+    networks: [myaddictive]

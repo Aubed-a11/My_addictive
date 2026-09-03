@@ -1,0 +1,23 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-service
+  profiles:
+    active: native
+  cloud:
+    config:
+      server:
+        native:
+          # Chemin relatif au repertoire de travail du processus (le script de
+          # demarrage lance ce jar depuis la racine du projet, ou se trouve
+          # justement le dossier config-repo).
+          search-locations: file:./config-repo
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true

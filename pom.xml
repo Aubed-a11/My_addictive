@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>bj.myaddictive</groupId>
+  <artifactId>myaddictive-backend</artifactId>
+  <version>1.0.0</version>
+  <packaging>pom</packaging>
+  <name>My Addictive - Backend microservices</name>
+
+  <properties>
+    <java.version>17</java.version>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <!-- Indispensable pour que @RequestParam/@PathVariable sans nom explicite
+         (ex. @RequestParam(required = false) String categorie) fonctionnent :
+         sans ce flag, Spring ne peut pas retrouver le nom du parametre par
+         reflexion une fois compile, et toute requete utilisant un tel
+         parametre echoue avec IllegalArgumentException (visible en erreur
+         500 generique cote client). Les projets Spring Boot generes via
+         Spring Initializr l'ont par defaut car ils heritent de
+         spring-boot-starter-parent ; ce projet gere ses dependances
+         manuellement (import de BOM plutot que heritage de parent), d'ou
+         l'absence de ce reglage jusqu'ici. -->
+    <maven.compiler.parameters>true</maven.compiler.parameters>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <spring-boot.version>3.2.5</spring-boot.version>
+    <spring-cloud.version>2023.0.1</spring-cloud.version>
+    <jjwt.version>0.12.5</jjwt.version>
+  </properties>
+
+  <modules>
+    <module>discovery-service</module>
+    <module>config-service</module>
+    <module>gateway-service</module>
+    <module>compte-service</module>
+    <module>media-service</module>
+    <module>musique-service</module>
+    <module>live-service</module>
+    <module>votes-service</module>
+    <module>boutique-service</module>
+    <module>paiement-service</module>
+  </modules>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-maven-plugin</artifactId>
+          <version>${spring-boot.version}</version>
+          <executions>
+            <execution>
+              <id>repackage</id>
+              <goals>
+                <goal>repackage</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>

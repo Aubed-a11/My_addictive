@@ -1,0 +1,17 @@
+target/
+data/
+logs/
+.pids-backend
+.env
+mobile-app/node_modules/
+mobile-app/.env
+mobile-app/.expo/
+mobile-app/dist/
+admin-dashboard/node_modules/
+admin-dashboard/.env
+admin-dashboard/dist/
+*.log
+
+# Secrets de production (voir DEPLOIEMENT.md)
+.env.production
+deploiement/certbot/

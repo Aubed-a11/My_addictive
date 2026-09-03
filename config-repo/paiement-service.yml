@@ -1,0 +1,39 @@
+server:
+  port: 8087
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/paiement_db;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+mobile-money:
+  # Integration reelle MTN Mobile Money (Collections / Request to Pay).
+  # Laisser subscription-key/api-user/api-key vides = mode simulation
+  # (paiement confirme automatiquement, pratique en local). Une fois ces
+  # identifiants renseignes (obtenus via momodeveloper.mtn.com apres
+  # inscription et validation KYC pour le Benin - voir DEPLOIEMENT.md),
+  # les paiements MTN Mobile Money passent par le vrai flux asynchrone,
+  # confirmes automatiquement par callback ou interrogation periodique,
+  # sans jamais necessiter de validation manuelle.
+  mtn:
+    base-url: ${MTN_MOMO_BASE_URL:https://sandbox.momodeveloper.mtn.com}
+    subscription-key: ${MTN_MOMO_SUBSCRIPTION_KEY:}
+    api-user: ${MTN_MOMO_API_USER:}
+    api-key: ${MTN_MOMO_API_KEY:}
+    target-environment: ${MTN_MOMO_TARGET_ENVIRONMENT:sandbox}
+    # URL PUBLIQUE et HTTPS de ce service (ex. https://api.myaddictive.com),
+    # necessaire pour que MTN puisse appeler notre callback. Sans HTTPS
+    # valide, MTN n'enverra jamais le callback (l'interrogation periodique
+    # prend alors seule le relai).
+    callback-host: ${MTN_MOMO_CALLBACK_HOST:}
+  moov:
+    base-url: ${MOOV_MONEY_BASE_URL:}
+    api-key: ${MOOV_MONEY_API_KEY:}

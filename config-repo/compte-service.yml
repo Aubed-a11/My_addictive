@@ -1,0 +1,31 @@
+server:
+  port: 8091
+spring:
+  datasource:
+    # Renomme depuis compte_db (v1, schema par telephone) suite au passage a
+    # l'authentification par email : le mode ddl-auto=update ne gere pas de
+    # maniere fiable un changement de contrainte unique sur une base deja
+    # peuplee. Un nouveau fichier garantit un schema propre, sans dependre
+    # d'une suppression manuelle du dossier data/.
+    url: jdbc:h2:file:./data/compte_db_v2;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  # Photo de profil (section 9.2) : limite raisonnable pour une photo de profil.
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+# Compte administrateur cree automatiquement au premier demarrage (voir AmorceAdministrateur).
+admin:
+  email: ${ADMIN_EMAIL:admin@myaddictive.com}
+  mot-de-passe: ${ADMIN_MOT_DE_PASSE:AdminAddictive2026!}

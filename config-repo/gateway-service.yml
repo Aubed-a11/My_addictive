@@ -1,0 +1,38 @@
+server:
+  port: 8090
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: compte-service
+          uri: lb://compte-service
+          predicates:
+            - Path=/api/compte/**
+        - id: media-service
+          uri: lb://media-service
+          predicates:
+            - Path=/api/media/**
+        - id: musique-service
+          uri: lb://musique-service
+          predicates:
+            - Path=/api/musique/**
+        - id: live-service
+          uri: lb://live-service
+          predicates:
+            - Path=/api/live/**
+        - id: votes-service
+          uri: lb://votes-service
+          predicates:
+            - Path=/api/votes/**
+        - id: boutique-service
+          uri: lb://boutique-service
+          predicates:
+            - Path=/api/boutique/**
+        - id: paiement-service
+          uri: lb://paiement-service
+          predicates:
+            - Path=/api/paiement/**
