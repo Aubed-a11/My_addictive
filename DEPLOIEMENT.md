@@ -17,6 +17,12 @@ deja configure par defaut dans `docker-compose.yml` pour ce cas — HTTP
 simple sur le port 80, sans domaine requis. Suis les sections 0 a 3, puis
 va directement a la section 8 ("Mettre a jour l'app mobile").
 
+**Encore plus rapide** : `deployer-en-un-clic.sh`, a la racine du projet,
+automatise entierement les sections 0 a 4 (installation des outils,
+recuperation du projet, generation des secrets, pare-feu, compilation et
+lancement) en une seule commande. Voir l'entete du fichier pour son usage
+exact (upload du zip + du script via `scp`, puis une seule execution).
+
 Ton adresse d'API sera : `http://IP_DU_VPS/api` (remplace `IP_DU_VPS` par
 l'IP reelle de ton VPS, visible dans le dashboard Infomaniak).
 
