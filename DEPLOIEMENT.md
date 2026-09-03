@@ -254,17 +254,16 @@ La PWA doit appeler une adresse HTTPS publique (les navigateurs bloquent
 les appels HTTP depuis un site HTTPS) : termine d'abord les etapes 3 a 7 de
 ce guide (domaine + certificat SSL) avant de continuer.
 
-**2. Preparer le depot pour Vercel**
+**2. Pousser le depot vers GitHub**
 
-Vercel a besoin d'un depot Git (GitHub, GitLab ou Bitbucket) contenant
-`mobile-app/`. Si le projet n'est pas encore versionne :
+Le depot Git est deja initialise a la racine du projet (un seul commit
+initial propre, sans secrets ni fichiers volumineux — verifie par
+`.gitignore`). Il ne reste qu'a creer un depot vide sur GitHub et a le
+pousser :
 ```bash
-cd mobile-app
-git init
-git add .
-git commit -m "Premiere version"
-# Cree un depot sur GitHub, puis :
-git remote add origin https://github.com/ton-compte/myaddictive-mobile.git
+cd /chemin/vers/myaddictive
+# Cree un depot vide sur https://github.com/new (ne pas cocher "Initialiser avec un README"), puis :
+git remote add origin https://github.com/ton-compte/myaddictive.git
 git push -u origin main
 ```
 
@@ -272,9 +271,8 @@ git push -u origin main
 
 - Va sur https://vercel.com, connecte-toi (ou cree un compte), puis
   "Add New Project" et selectionne ton depot `myaddictive-mobile`.
-- **Root Directory** : laisse a la racine si le depot ne contient que
-  `mobile-app/`, sinon indique `mobile-app` si le depot contient tout le
-  projet My Addictive.
+- **Root Directory** : indique `mobile-app` (le depot contient tout le
+  projet My Addictive, pas seulement l'app mobile).
 - **Build Command** et **Output Directory** sont deja definis par le
   fichier `vercel.json` present dans `mobile-app/` (`npm run build:web`,
   sortie dans `dist/`) : Vercel les detecte automatiquement, rien a
