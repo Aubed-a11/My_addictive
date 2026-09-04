@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler'; // DOIT etre le tout premier import : requis par React Navigation.
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import React, { useCallback, useEffect } from 'react';
+import { View, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -15,20 +15,22 @@ import RootNavigator from './src/navigation/RootNavigator';
 SplashScreenNatif.preventAutoHideAsync().catch(() => {});
 
 /**
- * Sur le web (navigateur), une app React Native s'etire naturellement pour
- * remplir toute la fenetre - ce n'est pas ce qu'on veut pour previsualiser
- * une app mobile. On la contraint donc dans un cadre a taille de telephone,
- * centre sur la page. Sur un vrai telephone (iOS/Android via Expo Go), ce
- * cadre n'existe pas : l'app occupe tout l'ecran normalement.
+ * Sur le web, au-dela d'une certaine largeur d'ecran, une interface pensee
+ * pour mobile devient difficile a lire si elle s'etire sur toute la
+ * fenetre (texte et listes trop larges). On limite donc simplement la
+ * largeur de contenu sur grand ecran, sans aucune decoration de cadre,
+ * d'encoche ou d'ombre : juste une colonne centree, comme le font la
+ * plupart des sites web responsives (Twitter, Instagram web...). Sur
+ * mobile (natif ou navigateur mobile), cette limite ne s'applique jamais.
  */
-function CadreTelephoneWeb({ children }) {
-  if (Platform.OS !== 'web') return children;
+const LARGEUR_MAX_CONTENU = 480;
+
+function ConteneurResponsive({ children }) {
+  const { width } = useWindowDimensions();
+  if (Platform.OS !== 'web' || width <= LARGEUR_MAX_CONTENU) return children;
   return (
     <View style={styles.pageWeb}>
-      <View style={styles.cadre}>
-        <View style={styles.encoche} />
-        <View style={styles.ecran}>{children}</View>
-      </View>
+      <View style={styles.colonne}>{children}</View>
     </View>
   );
 }
@@ -49,7 +51,7 @@ export default function App() {
   }
 
   return (
-    <CadreTelephoneWeb>
+    <ConteneurResponsive>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <AuthProvider>
@@ -58,43 +60,11 @@ export default function App() {
           </AuthProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
-    </CadreTelephoneWeb>
+    </ConteneurResponsive>
   );
 }
 
 const styles = StyleSheet.create({
-  pageWeb: {
-    flex: 1,
-    minHeight: '100vh',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1A1A1A',
-  },
-  cadre: {
-    width: 390,
-    height: 844,
-    borderRadius: 44,
-    overflow: 'hidden',
-    backgroundColor: '#000',
-    borderWidth: 10,
-    borderColor: '#000',
-    boxShadow: '0 30px 80px rgba(0,0,0,0.6)',
-  },
-  encoche: {
-    position: 'absolute',
-    top: 0,
-    left: '50%',
-    marginLeft: -70,
-    width: 140,
-    height: 26,
-    backgroundColor: '#000',
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
-    zIndex: 10,
-  },
-  ecran: {
-    flex: 1,
-    borderRadius: 34,
-    overflow: 'hidden',
-  },
+  pageWeb: { flex: 1, minHeight: '100vh', alignItems: 'center', backgroundColor: '#0A0A0F' },
+  colonne: { width: '100%', maxWidth: LARGEUR_MAX_CONTENU, flex: 1 },
 });

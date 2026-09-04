@@ -58,8 +58,6 @@ export default function HubScreen({ navigation }) {
               </Pressable>
             )}
 
-            <Image source={require('../../../assets/images/banniere_accueil.jpg')} style={styles.banniere} resizeMode="cover" />
-
             <SpotlightCarousel navigation={navigation} />
           </View>
 
@@ -101,7 +99,6 @@ const styles = StyleSheet.create({
   bienvenue: { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 16 },
   bandeauConnexion: { backgroundColor: 'rgba(22,21,31,0.85)', borderRadius: 12, padding: 14, marginBottom: 20, borderWidth: 1, borderColor: COLORS.bordure },
   bandeauTexte: { color: COLORS.texteAtténué, fontSize: 13 },
-  banniere: { width: '100%', aspectRatio: 1850 / 672, borderRadius: 16, marginBottom: 20 },
   grille: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   tuileConteneur: { width: '48%', height: 130, marginBottom: 14, borderRadius: 18, overflow: 'hidden' },
   tuile: { flex: 1, padding: 16 },
