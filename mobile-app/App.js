@@ -25,12 +25,23 @@ SplashScreenNatif.preventAutoHideAsync().catch(() => {});
  */
 const LARGEUR_MAX_CONTENU = 480;
 
+/**
+ * Sur le web, le conteneur racine doit explicitement occuper toute la
+ * hauteur de la fenetre (100vh) : sans ca, le contenu ne prend que sa
+ * hauteur naturelle et le reste de l'ecran reste vide/noir, meme si les
+ * composants internes utilisent flex:1 (qui ne sert a rien sans un
+ * ancetre a hauteur definie). Ceci s'applique sur TOUTE largeur d'ecran
+ * web, telephone compris - contrairement a la limitation de largeur
+ * (colonne centree), qui elle ne s'applique qu'au-dela de la largeur d'un
+ * telephone.
+ */
 function ConteneurResponsive({ children }) {
   const { width } = useWindowDimensions();
-  if (Platform.OS !== 'web' || width <= LARGEUR_MAX_CONTENU) return children;
+  if (Platform.OS !== 'web') return children;
+  const etroit = width <= LARGEUR_MAX_CONTENU;
   return (
     <View style={styles.pageWeb}>
-      <View style={styles.colonne}>{children}</View>
+      <View style={[styles.colonne, etroit && { maxWidth: '100%' }]}>{children}</View>
     </View>
   );
 }
