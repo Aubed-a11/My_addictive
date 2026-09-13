@@ -92,7 +92,7 @@ export default function BottomTabBar({ navigation, variante = 'media', ongletAct
   const config = VARIANTES[variante] || VARIANTES.media;
 
   return (
-    <View style={[styles.conteneur, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+    <View style={[styles.conteneur, { paddingBottom: Math.max(insets.bottom, 20) }]}>
       {config.onglets.map((o) => {
         const actif = o.cle === ongletActif;
         return (

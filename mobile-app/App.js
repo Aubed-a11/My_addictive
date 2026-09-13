@@ -76,6 +76,6 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  pageWeb: { flex: 1, minHeight: '100vh', alignItems: 'center', backgroundColor: '#0A0A0F' },
+  pageWeb: { flex: 1, minHeight: '100dvh', alignItems: 'center', backgroundColor: '#0A0A0F' },
   colonne: { width: '100%', maxWidth: LARGEUR_MAX_CONTENU, flex: 1 },
 });

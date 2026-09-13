@@ -121,12 +121,13 @@ public class MusiqueService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Ce titre est deja gratuit, aucun paiement necessaire.");
         }
 
-        Map<String, Object> corps = Map.of(
+        Map<String, Object> corps = new java.util.HashMap<>(Map.of(
                 "moyenPaiement", requete.moyenPaiement(),
                 "montantFcfa", titre.getPrixFcfa(),
                 "typeObjet", "TITRE",
                 "referenceId", String.valueOf(titre.getId())
-        );
+        ));
+        if (requete.telephonePayeur() != null) corps.put("telephonePayeur", requete.telephonePayeur());
 
         return webClientBuilder.build().post()
                 .uri("http://paiement-service/api/paiement/transactions")

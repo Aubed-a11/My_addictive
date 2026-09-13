@@ -19,7 +19,6 @@ volumes:
   data_votes:
   data_boutique:
   data_paiement:
-  uploads_media:
 
 services:
 
@@ -102,7 +101,7 @@ services:
         condition: service_healthy
     volumes:
       - data_media:/app/data
-      - uploads_media:/app/uploads
+      - ./media-service/uploads:/app/uploads
     networks: [myaddictive]
 
   musique-service:
@@ -118,6 +117,15 @@ services:
         condition: service_healthy
     volumes:
       - data_musique:/app/data
+      # Lecture seule du dossier reel des fichiers media (voir
+      # VerificateurFichiersTitres.java) : chaque conteneur etant isole par
+      # defaut, musique-service n'aurait sinon aucun moyen de verifier
+      # l'existence reelle des fichiers audio/image avant de les proposer,
+      # et nullifierait systematiquement tout, meme les fichiers reellement
+      # presents. Chemin choisi pour correspondre exactement au chemin
+      # relatif "./media-service/uploads" utilise par le code (repertoire
+      # de travail du conteneur = /app).
+      - ./media-service/uploads:/app/media-service/uploads:ro
     networks: [myaddictive]
 
   live-service:

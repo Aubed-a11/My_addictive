@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { Chrome, Facebook, Apple } from 'lucide-react-native';
 import FondAuth from '../../components/FondAuth';
 import Logo from '../../components/Logo';
@@ -72,9 +72,9 @@ export default function LoginScreen({ navigation, route }) {
       </View>
 
       <View style={styles.reseaux}>
-        <View style={styles.boutonReseau}><Chrome color="#fff" size={18} /><Text style={styles.reseauTexte}>Google</Text></View>
-        <View style={styles.boutonReseau}><Facebook color="#fff" size={18} /><Text style={styles.reseauTexte}>Facebook</Text></View>
-        <View style={styles.boutonReseau}><Apple color="#fff" size={18} /><Text style={styles.reseauTexte}>Apple</Text></View>
+        <Pressable style={styles.boutonReseau} onPress={() => Alert.alert('Bientot disponible', "La connexion via Google n'est pas encore activee sur cette version.")}><Chrome color="#fff" size={18} /><Text style={styles.reseauTexte}>Google</Text></Pressable>
+        <Pressable style={styles.boutonReseau} onPress={() => Alert.alert('Bientot disponible', "La connexion via Facebook n'est pas encore activee sur cette version.")}><Facebook color="#fff" size={18} /><Text style={styles.reseauTexte}>Facebook</Text></Pressable>
+        <Pressable style={styles.boutonReseau} onPress={() => Alert.alert('Bientot disponible', "La connexion via Apple n'est pas encore activee sur cette version.")}><Apple color="#fff" size={18} /><Text style={styles.reseauTexte}>Apple</Text></Pressable>
       </View>
 
       <BadgeSecurite />
