@@ -4,7 +4,7 @@ import client from '../api/client';
 
 const PHASES = ['INSCRIPTIONS', 'PRESELECTION', 'ELIMINATIONS', 'FINALE', 'TERMINEE'];
 const CATEGORIES = ['MUSIQUE', 'ENTREPRENEURIAT', 'TECH', 'DANSE', 'MODE', 'AUTRE'];
-const COMPETITION_VIDE = { nom: '', categorie: 'MUSIQUE', saison: '', phase: 'INSCRIPTIONS', ponderationPublic: 0.5, ponderationJury: 0.5 };
+const COMPETITION_VIDE = { nom: '', categorie: 'MUSIQUE', saison: '', phase: 'INSCRIPTIONS', dateFinPhase: null, ponderationPublic: 0.5, ponderationJury: 0.5 };
 const CANDIDAT_VIDE = { nom: '', ville: '', photoUrl: '', videoUrl: '', statut: 'EN_LICE', noteJury: 0 };
 
 export default function Competitions() {
@@ -194,6 +194,10 @@ export default function Competitions() {
               <select value={formulaire.phase} onChange={(e) => setFormulaire({ ...formulaire, phase: e.target.value })}>
                 {PHASES.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
+            </div>
+            <div className="champ">
+              <label>Fin de la phase actuelle (optionnel, pour le compte a rebours affiche aux utilisateurs)</label>
+              <input type="datetime-local" value={formulaire.dateFinPhase ? formulaire.dateFinPhase.slice(0, 16) : ''} onChange={(e) => setFormulaire({ ...formulaire, dateFinPhase: e.target.value ? new Date(e.target.value).toISOString() : null })} />
             </div>
             {erreur && <div className="erreur">{erreur}</div>}
             <div style={{ display: 'flex', gap: 10 }}>

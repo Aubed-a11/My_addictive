@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Clock } from 'lucide-react-native';
 import client from '../../api/client';
 import { COLORS } from '../../theme/colors';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
 import EnteteLogo from '../../components/EnteteLogo';
 import BarreRecherche from '../../components/BarreRecherche';
 import VotesCarousel from '../../components/VotesCarousel';
+import CompteARebours from '../../components/CompteARebours';
+
+const LIBELLES_PHASE = { INSCRIPTIONS: 'Inscriptions', PRESELECTION: 'Preselection', ELIMINATIONS: 'Eliminatoires', FINALE: 'Finale', TERMINEE: 'Terminee' };
 
 /** Rubrique 4, "Competitions et votes" (section 7) : pas seulement des concours musicaux. */
 export default function CompetitionsListeScreen({ navigation }) {
@@ -69,7 +73,13 @@ export default function CompetitionsListeScreen({ navigation }) {
                   <Text style={styles.badgeCategorieTexte}>{item.categorie || 'MUSIQUE'}</Text>
                 </View>
               </View>
-              <Text style={styles.carteMeta}>Saison {item.saison} · Phase : {item.phase}</Text>
+              <Text style={styles.carteMeta}>Saison {item.saison} · Phase : {LIBELLES_PHASE[item.phase] || item.phase}</Text>
+              {item.dateFinPhase && item.phase !== 'TERMINEE' && (
+                <View style={styles.ligneCompteARebours}>
+                  <Clock size={11} color={COLORS.or} />
+                  <CompteARebours dateCible={item.dateFinPhase} style={styles.compteARebours} texteExpire="Phase terminee" />
+                </View>
+              )}
             </Pressable>
           )}
           ListEmptyComponent={<Text style={styles.vide}>{recherche ? 'Aucun resultat pour cette recherche.' : 'Aucune competition en cours.'}</Text>}
@@ -98,4 +108,6 @@ const styles = StyleSheet.create({
   badgeCategorie: { backgroundColor: 'rgba(168,85,247,0.25)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, marginLeft: 8 },
   badgeCategorieTexte: { color: COLORS.votes, fontSize: 10, fontWeight: '700' },
   carteMeta: { color: COLORS.texteAtténué, fontSize: 12, marginTop: 4 },
+  ligneCompteARebours: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
+  compteARebours: { color: COLORS.or, fontSize: 11, fontWeight: '700' },
 });
