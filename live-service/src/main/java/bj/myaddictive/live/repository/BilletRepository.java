@@ -1,6 +1,7 @@
 package bj.myaddictive.live.repository;
 
 import bj.myaddictive.live.domain.Billet;
+import bj.myaddictive.live.domain.CategorieBillet;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -10,4 +11,6 @@ public interface BilletRepository extends JpaRepository<Billet, Long> {
     List<Billet> findByUtilisateurId(Long utilisateurId);
     Optional<Billet> findByCodeQr(String codeQr);
     boolean existsByTransactionId(Long transactionId);
+    /** Places deja prises pour une categorie donnee (statut different d'ANNULE : un billet annule libere sa place). */
+    long countByEvenementIdAndCategorieAndStatutNot(Long evenementId, CategorieBillet categorie, String statut);
 }

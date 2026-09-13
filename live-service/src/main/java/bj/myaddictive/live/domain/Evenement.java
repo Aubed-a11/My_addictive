@@ -43,6 +43,13 @@ public class Evenement {
     @Column(name = "prix_vip_fcfa")
     private Long prixVipFcfa;
 
+    /** Nombre total de places par categorie : sert a calculer les places restantes (section "urgence d'achat"). Null = capacite illimitee (pas d'indicateur de rarete affiche). */
+    @Column(name = "capacite_standard")
+    private Integer capaciteStandard;
+
+    @Column(name = "capacite_vip")
+    private Integer capaciteVip;
+
     @Column(name = "url_flux")
     private String urlFlux;
 
@@ -74,6 +81,10 @@ public class Evenement {
     public void setPrixStandardFcfa(Long prixStandardFcfa) { this.prixStandardFcfa = prixStandardFcfa; }
     public Long getPrixVipFcfa() { return prixVipFcfa; }
     public void setPrixVipFcfa(Long prixVipFcfa) { this.prixVipFcfa = prixVipFcfa; }
+    public Integer getCapaciteStandard() { return capaciteStandard; }
+    public void setCapaciteStandard(Integer capaciteStandard) { this.capaciteStandard = capaciteStandard; }
+    public Integer getCapaciteVip() { return capaciteVip; }
+    public void setCapaciteVip(Integer capaciteVip) { this.capaciteVip = capaciteVip; }
     public String getUrlFlux() { return urlFlux; }
     public void setUrlFlux(String urlFlux) { this.urlFlux = urlFlux; }
     public String getUrlReplay() { return urlReplay; }

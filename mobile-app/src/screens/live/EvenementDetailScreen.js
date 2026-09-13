@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Pressable, Image, ImageBackground, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Pressable, Image, ImageBackground, ScrollView, Share, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MessageCircle, Heart } from 'lucide-react-native';
+import { MessageCircle, Heart, Share2, CalendarPlus, Flame } from 'lucide-react-native';
 import client from '../../api/client';
 import PrimaryButton from '../../components/PrimaryButton';
 import TextField from '../../components/TextField';
@@ -43,11 +43,18 @@ export default function EvenementDetailScreen({ navigation, route }) {
   const [message, setMessage] = useState(null);
   const [favori, setFavori] = useState(false);
   const [favoriId, setFavoriId] = useState(null);
+  const [disponibilite, setDisponibilite] = useState(null);
 
   useEffect(() => {
     (async () => {
       const { data } = await client.get(`/api/live/evenements/${id}`);
       setEvenement(data);
+    })();
+    (async () => {
+      try {
+        const { data } = await client.get(`/api/live/evenements/${id}/disponibilite`);
+        setDisponibilite(data);
+      } catch {}
     })();
   }, [id]);
 
@@ -129,6 +136,31 @@ export default function EvenementDetailScreen({ navigation, route }) {
 
   if (!evenement) return <ActivityIndicator color={COLORS.billetterie} style={{ marginTop: 40 }} />;
 
+  const partager = async () => {
+    try {
+      await Share.share({
+        message: `${evenement.titre} - ${evenement.lieu}\nDecouvre cet evenement sur My Addictive !`,
+        title: evenement.titre,
+      });
+    } catch {}
+  };
+
+  const ajouterAuCalendrier = () => {
+    const debut = new Date(evenement.dateDebut);
+    const fin = new Date(debut.getTime() + 3 * 60 * 60 * 1000); // 3h par defaut, duree non stockee cote backend
+    const formater = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(evenement.titre)}&dates=${formater(debut)}/${formater(fin)}&location=${encodeURIComponent(evenement.lieu || '')}&details=${encodeURIComponent('Evenement My Addictive')}`;
+    Linking.openURL(url).catch(() => {});
+  };
+
+  // Urgence d'achat : pastille "Plus que X places !" quand le stock est bas (moins de 20%, ou moins de 10 places dans l'absolu).
+  const urgence = (restantes, capacite) => {
+    if (restantes == null) return null;
+    if (restantes === 0) return { texte: 'COMPLET', couleur: '#EF4444' };
+    if (restantes <= 10 || restantes / capacite <= 0.2) return { texte: `Plus que ${restantes} place${restantes > 1 ? 's' : ''} !`, couleur: '#F97316' };
+    return null;
+  };
+
   return (
     <ImageBackground source={require('../../../assets/images/scene_connexion.jpg')} style={styles.safe} resizeMode="cover">
       <View style={styles.voile} />
@@ -144,6 +176,14 @@ export default function EvenementDetailScreen({ navigation, route }) {
         <Pressable style={styles.boutonCoeur} onPress={basculerFavori}>
           <Heart size={18} color={favori ? COLORS.billetterie : '#fff'} fill={favori ? COLORS.billetterie : 'none'} />
         </Pressable>
+        <Pressable style={[styles.boutonCoeur, { right: 62 }]} onPress={partager}>
+          <Share2 size={18} color="#fff" />
+        </Pressable>
+        {evenement.statut === 'A_VENIR' && (
+          <Pressable style={[styles.boutonCoeur, { right: 108 }]} onPress={ajouterAuCalendrier}>
+            <CalendarPlus size={18} color="#fff" />
+          </Pressable>
+        )}
       </View>
       <View style={{ padding: 20, paddingBottom: 0 }}>
         <Text style={styles.titre}>{evenement.titre}</Text>
@@ -179,14 +219,26 @@ export default function EvenementDetailScreen({ navigation, route }) {
         {evenement.payant && evenement.statut !== 'TERMINE' && (
           <>
             <View style={styles.categories}>
-              {['STANDARD', 'VIP'].map((c) => (
-                <PrimaryButton
-                  key={c}
-                  titre={c === 'STANDARD' ? `Standard  ·  ${evenement.prixStandardFcfa} FCFA` : `VIP  ·  ${evenement.prixVipFcfa} FCFA`}
-                  couleur={categorie === c ? COLORS.billetterie : COLORS.fondCarte}
-                  onPress={() => setCategorie(c)}
-                />
-              ))}
+              {['STANDARD', 'VIP'].map((c) => {
+                const restantes = c === 'STANDARD' ? disponibilite?.standardRestantes : disponibilite?.vipRestantes;
+                const capacite = c === 'STANDARD' ? disponibilite?.standardCapacite : disponibilite?.vipCapacite;
+                const alerte = urgence(restantes, capacite);
+                return (
+                  <View key={c}>
+                    <PrimaryButton
+                      titre={c === 'STANDARD' ? `Standard  ·  ${evenement.prixStandardFcfa} FCFA` : `VIP  ·  ${evenement.prixVipFcfa} FCFA`}
+                      couleur={categorie === c ? COLORS.billetterie : COLORS.fondCarte}
+                      onPress={() => setCategorie(c)}
+                    />
+                    {alerte && (
+                      <View style={[styles.badgeUrgence, { backgroundColor: alerte.couleur }]}>
+                        <Flame size={11} color="#fff" />
+                        <Text style={styles.badgeUrgenceTexte}>{alerte.texte}</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
             </View>
 
             <Text style={styles.libelleMoyenPaiement}>Moyen de paiement</Text>
@@ -216,7 +268,13 @@ export default function EvenementDetailScreen({ navigation, route }) {
               </Text>
             )}
 
-            <PrimaryButton titre="Reserver maintenant" onPress={acheterBillet} couleur={COLORS.billetterie} chargement={achatEnCours} />
+            <PrimaryButton
+              titre={disponibilite && (categorie === 'STANDARD' ? disponibilite.standardRestantes : disponibilite.vipRestantes) === 0 ? 'Complet' : 'Reserver maintenant'}
+              onPress={acheterBillet}
+              couleur={COLORS.billetterie}
+              chargement={achatEnCours}
+              disabled={disponibilite && (categorie === 'STANDARD' ? disponibilite.standardRestantes : disponibilite.vipRestantes) === 0}
+            />
           </>
         )}
       </View>
@@ -243,6 +301,8 @@ const styles = StyleSheet.create({
   boutonChat: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.fondCarte, borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: COLORS.live },
   boutonChatTexte: { color: '#fff', fontWeight: '600', fontSize: 13 },
   categories: { marginBottom: 4 },
+  badgeUrgence: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginTop: -4, marginBottom: 8 },
+  badgeUrgenceTexte: { color: '#fff', fontSize: 10, fontWeight: '800' },
   libelleMoyenPaiement: { color: '#fff', fontWeight: '600', fontSize: 13, marginTop: 14, marginBottom: 8 },
   moyensPaiement: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 },
   moyenPaiement: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: COLORS.bordure, backgroundColor: COLORS.fondCarte },

@@ -43,6 +43,12 @@ public class EvenementController {
         return ResponseEntity.ok(liveService.obtenirEvenement(id));
     }
 
+    /** Places restantes par categorie, pour afficher l'urgence d'achat ("Plus que X places !"). */
+    @GetMapping("/evenements/{id}/disponibilite")
+    public ResponseEntity<Map<String, Object>> disponibilite(@PathVariable Long id) {
+        return ResponseEntity.ok(liveService.disponibilite(id));
+    }
+
     private void exigerAdministrateur(String role) {
         if (!"ADMINISTRATEUR".equals(role)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Reserve aux administrateurs.");
@@ -146,5 +152,24 @@ public class EvenementController {
         String contenu = corps.getOrDefault("contenu", "").trim();
         if (contenu.isEmpty()) throw new ApiException(HttpStatus.BAD_REQUEST, "Le message ne peut pas etre vide.");
         return ResponseEntity.ok(chatLiveService.envoyer(id, "Utilisateur " + userId, contenu));
+    }
+
+    /**
+     * Reactions volantes (coeurs, feu, applaudissements...) pendant un
+     * direct : ouvertes a tous, y compris sans compte, pour maximiser
+     * l'engagement (contrairement au chat ecrit qui exige une connexion).
+     * Purement ephemeres, jamais persistees.
+     */
+    @PostMapping("/evenements/{id}/reactions")
+    public ResponseEntity<Void> envoyerReaction(@PathVariable Long id, @RequestBody Map<String, String> corps) {
+        String emoji = corps.getOrDefault("emoji", "");
+        if (emoji.isBlank() || emoji.length() > 8) throw new ApiException(HttpStatus.BAD_REQUEST, "Emoji invalide.");
+        chatLiveService.envoyerReaction(id, emoji);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/evenements/{id}/reactions")
+    public ResponseEntity<List<String>> reactionsRecentes(@PathVariable Long id, @RequestParam(defaultValue = "0") long depuis) {
+        return ResponseEntity.ok(chatLiveService.obtenirReactionsRecentes(id, depuis));
     }
 }

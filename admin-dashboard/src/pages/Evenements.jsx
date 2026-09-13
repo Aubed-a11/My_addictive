@@ -6,7 +6,7 @@ const STATUTS = ['A_VENIR', 'EN_DIRECT', 'REPLAY', 'TERMINE'];
 
 const VIDE = {
   titre: '', lieu: '', imageUrl: '', dateDebut: '', statut: 'A_VENIR', chaineId: '',
-  payant: true, prixStandardFcfa: 5000, prixVipFcfa: 15000, urlFlux: '', urlReplay: '',
+  payant: true, prixStandardFcfa: 5000, prixVipFcfa: 15000, capaciteStandard: null, capaciteVip: null, urlFlux: '', urlReplay: '',
 };
 
 /** Gestion des evenements (creation, programmation, edition, suppression) — reserve aux administrateurs. */
@@ -191,6 +191,18 @@ export default function Evenements() {
                 <div className="champ">
                   <label>Prix VIP (FCFA)</label>
                   <input type="number" value={formulaire.prixVipFcfa || ''} onChange={(e) => setFormulaire({ ...formulaire, prixVipFcfa: Number(e.target.value) })} />
+                </div>
+              </div>
+            )}
+            {formulaire.payant && (
+              <div className="ligne-champs">
+                <div className="champ">
+                  <label>Capacite standard (laisser vide = illimite)</label>
+                  <input type="number" value={formulaire.capaciteStandard || ''} onChange={(e) => setFormulaire({ ...formulaire, capaciteStandard: e.target.value ? Number(e.target.value) : null })} placeholder="ex. 200" />
+                </div>
+                <div className="champ">
+                  <label>Capacite VIP (laisser vide = illimite)</label>
+                  <input type="number" value={formulaire.capaciteVip || ''} onChange={(e) => setFormulaire({ ...formulaire, capaciteVip: e.target.value ? Number(e.target.value) : null })} placeholder="ex. 30" />
                 </div>
               </div>
             )}

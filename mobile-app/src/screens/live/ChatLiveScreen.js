@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, Pressable, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Send, Eye } from 'lucide-react-native';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../theme/colors';
+import ReactionVolante from '../../components/ReactionVolante';
 
 // Palette de couleurs attribuees aux pseudos par hachage simple, pour que
 // chaque participant garde toujours la meme couleur (fidele a la maquette :
@@ -16,6 +17,9 @@ function couleurPourPseudo(pseudo) {
   return COULEURS_PSEUDO[somme % COULEURS_PSEUDO.length];
 }
 
+const EMOJIS_REACTION = ['❤️', '🔥', '👏', '😂', '🎉'];
+let compteurReactionId = 0;
+
 /**
  * Chat en direct plein ecran (section 6.5), fidele a la maquette de
  * reference : badge LIVE + compteur de spectateurs dans l'en-tete, pseudos
@@ -23,14 +27,22 @@ function couleurPourPseudo(pseudo) {
  * chat integre a la fiche evenement (rafraichissement REST toutes les 4s ;
  * le canal STOMP existe deja cote backend pour une future bascule en temps
  * reel direct).
+ *
+ * Comprend aussi les "reactions volantes" (coeurs, feu, applaudissements...) :
+ * ouvertes a tous meme sans compte, diffusees a tous les spectateurs par
+ * interrogation rapide (1.5s) du serveur, pour un effet visuel partage
+ * a la maniere d'un livestream Instagram/TikTok.
  */
 export default function ChatLiveScreen({ navigation, route }) {
   const { id, titre } = route.params;
   const { estConnecte } = useAuth();
+  const { width } = useWindowDimensions();
   const [messages, setMessages] = useState([]);
   const [spectateurs, setSpectateurs] = useState(0);
   const [texte, setTexte] = useState('');
+  const [reactionsVolantes, setReactionsVolantes] = useState([]);
   const listeRef = useRef(null);
+  const derniereReactionVue = useRef(Date.now());
 
   useEffect(() => {
     let actif = true;
@@ -47,6 +59,39 @@ export default function ChatLiveScreen({ navigation, route }) {
     const intervalle = setInterval(rafraichir, 4000);
     return () => { actif = false; clearInterval(intervalle); };
   }, [id]);
+
+  // Interrogation rapide et dediee des reactions (independante du rafraichissement
+  // du chat, plus lent) : c'est ce qui donne l'impression de reactions "en direct".
+  useEffect(() => {
+    let actif = true;
+    const interrogerReactions = async () => {
+      try {
+        const { data } = await client.get(`/api/live/evenements/${id}/reactions`, { params: { depuis: derniereReactionVue.current } });
+        if (actif && data.length > 0) {
+          derniereReactionVue.current = Date.now();
+          data.forEach((emoji) => ajouterReactionVolante(emoji));
+        }
+      } catch {}
+    };
+    const intervalle = setInterval(interrogerReactions, 1500);
+    return () => { actif = false; clearInterval(intervalle); };
+  }, [id]);
+
+  const ajouterReactionVolante = (emoji) => {
+    const reactionId = compteurReactionId++;
+    const x = 30 + Math.random() * Math.max(40, width - 100); // position horizontale de depart variee, dans les limites de l'ecran
+    const derive = 20 + Math.random() * 30; // amplitude du serpentin gauche-droite
+    setReactionsVolantes((precedent) => [...precedent, { reactionId, emoji, depart: { x, derive } }]);
+  };
+
+  const retirerReactionVolante = (reactionId) => {
+    setReactionsVolantes((precedent) => precedent.filter((r) => r.reactionId !== reactionId));
+  };
+
+  const envoyerReaction = async (emoji) => {
+    ajouterReactionVolante(emoji); // affichage optimiste immediat, sans attendre le serveur
+    try { await client.post(`/api/live/evenements/${id}/reactions`, { emoji }); } catch {}
+  };
 
   const envoyer = async () => {
     if (!texte.trim()) return;
@@ -79,26 +124,45 @@ export default function ChatLiveScreen({ navigation, route }) {
         </View>
       </View>
 
-      <FlatList
-        ref={listeRef}
-        style={{ flex: 1 }}
-        data={messages}
-        keyExtractor={(_, i) => String(i)}
-        contentContainerStyle={{ padding: 16 }}
-        renderItem={({ item }) => (
-          <View style={styles.messageLigne}>
-            <View style={[styles.avatar, { backgroundColor: couleurPourPseudo(item.auteur) }]}>
-              <Text style={styles.avatarLettre}>{item.auteur?.[0]?.toUpperCase() || '?'}</Text>
+      <View style={{ flex: 1 }}>
+        <FlatList
+          ref={listeRef}
+          style={{ flex: 1 }}
+          data={messages}
+          keyExtractor={(_, i) => String(i)}
+          contentContainerStyle={{ padding: 16 }}
+          renderItem={({ item }) => (
+            <View style={styles.messageLigne}>
+              <View style={[styles.avatar, { backgroundColor: couleurPourPseudo(item.auteur) }]}>
+                <Text style={styles.avatarLettre}>{item.auteur?.[0]?.toUpperCase() || '?'}</Text>
+              </View>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={[styles.pseudo, { color: couleurPourPseudo(item.auteur) }]}>{item.auteur}</Text>
+                <Text style={styles.contenuMessage}>{item.contenu}</Text>
+              </View>
             </View>
-            <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={[styles.pseudo, { color: couleurPourPseudo(item.auteur) }]}>{item.auteur}</Text>
-              <Text style={styles.contenuMessage}>{item.contenu}</Text>
-            </View>
-          </View>
-        )}
-        onContentSizeChange={() => listeRef.current?.scrollToEnd({ animated: true })}
-        ListEmptyComponent={<Text style={styles.vide}>Aucun message pour l'instant. Sois le premier a ecrire !</Text>}
-      />
+          )}
+          onContentSizeChange={() => listeRef.current?.scrollToEnd({ animated: true })}
+          ListEmptyComponent={<Text style={styles.vide}>Aucun message pour l'instant. Sois le premier a ecrire !</Text>}
+        />
+
+        {reactionsVolantes.map((r) => (
+          <ReactionVolante
+            key={r.reactionId}
+            emoji={r.emoji}
+            depart={r.depart}
+            onTermine={() => retirerReactionVolante(r.reactionId)}
+          />
+        ))}
+      </View>
+
+      <View style={styles.ligneReactions}>
+        {EMOJIS_REACTION.map((emoji) => (
+          <Pressable key={emoji} style={styles.boutonReaction} onPress={() => envoyerReaction(emoji)}>
+            <Text style={styles.boutonReactionTexte}>{emoji}</Text>
+          </Pressable>
+        ))}
+      </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.saisieConteneur}>
@@ -133,6 +197,9 @@ const styles = StyleSheet.create({
   avatarLettre: { color: '#fff', fontWeight: '800', fontSize: 13 },
   pseudo: { fontWeight: '700', fontSize: 13, marginBottom: 2 },
   contenuMessage: { color: '#fff', fontSize: 14, lineHeight: 19 },
+  ligneReactions: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 8, borderTopWidth: 1, borderTopColor: COLORS.bordure },
+  boutonReaction: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fondCarte },
+  boutonReactionTexte: { fontSize: 22 },
   saisieConteneur: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 10, borderTopWidth: 1, borderTopColor: COLORS.bordure },
   champ: { flex: 1, backgroundColor: COLORS.fondCarte, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 11, color: '#fff', fontSize: 14 },
   boutonEnvoyer: { width: 42, height: 42, borderRadius: 21, backgroundColor: COLORS.live, alignItems: 'center', justifyContent: 'center' },

@@ -63,7 +63,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     // compteur de lecture public, malgre le prefixe /api/musique/titres reserve
     // par ailleurs a l'administration du catalogue).
     private static final List<String> SUFFIXES_TOUJOURS_PUBLICS = List.of(
-            "/ecouter", "/spectateurs/entrer", "/spectateurs/sortir"
+            "/ecouter", "/spectateurs/entrer", "/spectateurs/sortir", "/reactions"
     );
 
     private static final String SECRET_PAR_DEFAUT = "myaddictive-dev-secret-change-in-production-0123456789";

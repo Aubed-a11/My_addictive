@@ -105,6 +105,13 @@ public class LiveService {
         if (evenement.getStatut() == StatutEvenement.TERMINE) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Cet evenement est termine, la billetterie est fermee.");
         }
+        Integer capacite = requete.categorie() == CategorieBillet.VIP ? evenement.getCapaciteVip() : evenement.getCapaciteStandard();
+        if (capacite != null) {
+            long deja = billetRepository.countByEvenementIdAndCategorieAndStatutNot(requete.evenementId(), requete.categorie(), "ANNULE");
+            if (deja >= capacite) {
+                throw new ApiException(HttpStatus.CONFLICT, "Complet ! Il n'y a plus de place disponible dans cette categorie.");
+            }
+        }
         Long prix = requete.categorie() == CategorieBillet.VIP ? evenement.getPrixVipFcfa() : evenement.getPrixStandardFcfa();
 
         Map<String, Object> corps = new java.util.HashMap<>(Map.of(
@@ -121,6 +128,27 @@ public class LiveService {
                 .retrieve()
                 .bodyToMono(Map.class)
                 .block();
+    }
+
+    /**
+     * Disponibilite des places par categorie (section "urgence d'achat") :
+     * renvoie null pour une categorie sans capacite definie (illimitee),
+     * sinon le nombre de places encore libres (jamais negatif).
+     */
+    public Map<String, Object> disponibilite(Long evenementId) {
+        Evenement evenement = obtenirEvenement(evenementId);
+        Map<String, Object> resultat = new java.util.HashMap<>();
+        if (evenement.getCapaciteStandard() != null) {
+            long prises = billetRepository.countByEvenementIdAndCategorieAndStatutNot(evenementId, CategorieBillet.STANDARD, "ANNULE");
+            resultat.put("standardRestantes", Math.max(0, evenement.getCapaciteStandard() - prises));
+            resultat.put("standardCapacite", evenement.getCapaciteStandard());
+        }
+        if (evenement.getCapaciteVip() != null) {
+            long prises = billetRepository.countByEvenementIdAndCategorieAndStatutNot(evenementId, CategorieBillet.VIP, "ANNULE");
+            resultat.put("vipRestantes", Math.max(0, evenement.getCapaciteVip() - prises));
+            resultat.put("vipCapacite", evenement.getCapaciteVip());
+        }
+        return resultat;
     }
 
     public List<bj.myaddictive.live.dto.BilletResponse> mesBillets(Long utilisateurId) {
