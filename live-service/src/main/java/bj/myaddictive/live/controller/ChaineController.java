@@ -40,6 +40,13 @@ public class ChaineController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/abonnements-chaine/{id}")
+    public ResponseEntity<Void> desabonner(@RequestHeader(value = "X-User-Id", required = false) String userId, @PathVariable Long id) {
+        if (userId == null) throw new ApiException(HttpStatus.UNAUTHORIZED, "Connexion requise.");
+        liveService.desabonner(Long.valueOf(userId), id);
+        return ResponseEntity.noContent().build();
+    }
+
     /** Chaines suivies (recommandations media, section 4.2). */
     @GetMapping("/mes-chaines-suivies")
     public ResponseEntity<List<Chaine>> mesChainesSuivies(@RequestHeader(value = "X-User-Id", required = false) String userId) {
@@ -50,9 +57,12 @@ public class ChaineController {
     /** Fan club / abonnement mensuel a un artiste (section 9.2). */
     @PostMapping("/chaines/{id}/fan-club/initier")
     public ResponseEntity<Map<String, Object>> initierFanClub(
-            @RequestHeader(value = "X-User-Id", required = false) String userId, @PathVariable Long id) {
+            @RequestHeader(value = "X-User-Id", required = false) String userId, @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> corps) {
         if (userId == null) throw new ApiException(HttpStatus.UNAUTHORIZED, "Connexion requise.");
-        return ResponseEntity.ok(liveService.initierAbonnementFanClub(userId, id));
+        Map<String, String> corpsSur = corps != null ? corps : Map.of();
+        String moyenPaiement = corpsSur.getOrDefault("moyenPaiement", "MTN_MOMO");
+        return ResponseEntity.ok(liveService.initierAbonnementFanClub(userId, id, moyenPaiement, corpsSur.get("telephonePayeur")));
     }
 
     @GetMapping("/chaines/{id}/fan-club/statut")

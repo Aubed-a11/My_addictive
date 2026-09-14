@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Wallet, ArrowUpRight, ArrowDownRight } from 'lucide-react-native';
 import client from '../../api/client';
 import PrimaryButton from '../../components/PrimaryButton';
+import TextField from '../../components/TextField';
 import MessageErreur from '../../components/MessageErreur';
 import { COLORS } from '../../theme/colors';
 import { TAUX_PIECE_FCFA } from '../../theme/votes';
@@ -16,15 +17,27 @@ const PACKS = [
   { pieces: 140, prix: 120 * TAUX_PIECE_FCFA, bonus: '15% de pieces offertes' },
 ];
 
+const MOYENS_PAIEMENT = [
+  { cle: 'MTN_MOMO', label: 'MTN Mobile Money' },
+  { cle: 'MOOV_MONEY', label: 'Moov Money' },
+  { cle: 'CELTIIS_CASH', label: 'Celtiis Cash' },
+  { cle: 'CARTE_BANCAIRE', label: 'Carte bancaire' },
+  { cle: 'AGENCE', label: 'Paiement en agence' },
+];
+const MOBILE_MONEY = ['MTN_MOMO', 'MOOV_MONEY', 'CELTIIS_CASH'];
+
 /** "Mon Wallet" (section 9.1) : solde, recharge, historique des mouvements. */
 export default function PortefeuilleScreen({ navigation }) {
   const [solde, setSolde] = useState(0);
   const [mouvements, setMouvements] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [modalOuvert, setModalOuvert] = useState(false);
+  const [packChoisi, setPackChoisi] = useState(null);
+  const [moyenPaiement, setMoyenPaiement] = useState('MTN_MOMO');
+  const [telephonePayeur, setTelephonePayeur] = useState('');
   const [erreur, setErreur] = useState(null);
   const [message, setMessage] = useState(null);
-  const [chargementPack, setChargementPack] = useState(null);
+  const [achatEnCours, setAchatEnCours] = useState(false);
 
   const rafraichir = async () => {
     const [{ data: p }, { data: m }] = await Promise.all([
@@ -38,20 +51,41 @@ export default function PortefeuilleScreen({ navigation }) {
 
   useEffect(() => { rafraichir(); }, []);
 
-  const acheter = async (pack) => {
+  const ouvrirChoixPaiement = (pack) => {
+    setPackChoisi(pack);
     setErreur(null);
-    setChargementPack(pack.pieces);
+  };
+
+  const acheter = async () => {
+    if (!packChoisi) return;
+    if (MOBILE_MONEY.includes(moyenPaiement) && telephonePayeur.trim().length < 8) {
+      setErreur('Merci de renseigner un numero de telephone Mobile Money valide.');
+      return;
+    }
+    setErreur(null);
+    setAchatEnCours(true);
     try {
-      await client.post('/api/votes/portefeuille/acheter-pieces', {
-        nombrePieces: pack.pieces, montantFcfa: pack.prix, moyenPaiement: 'MTN_MOMO',
+      const { data: transaction } = await client.post('/api/votes/portefeuille/acheter-pieces', {
+        nombrePieces: packChoisi.pieces, montantFcfa: packChoisi.prix, moyenPaiement,
+        telephonePayeur: MOBILE_MONEY.includes(moyenPaiement) ? telephonePayeur.trim() : undefined,
       });
-      setMessage(`${pack.pieces} pieces creditees.`);
+      if (transaction.statut === 'REUSSI') {
+        setMessage(`${packChoisi.pieces} pieces creditees.`);
+      } else if (moyenPaiement === 'AGENCE') {
+        setMessage("Demande enregistree. Presentez-vous a l'agence : vos pieces seront creditees une fois le paiement verifie.");
+      } else if (MOBILE_MONEY.includes(moyenPaiement)) {
+        setMessage('Demande envoyee sur votre telephone. Validez avec votre code PIN : vos pieces seront creditees des confirmation.');
+      } else {
+        setMessage('Paiement en cours de verification.');
+      }
       setModalOuvert(false);
+      setPackChoisi(null);
+      setTelephonePayeur('');
       await rafraichir();
     } catch (e) {
       setErreur(e.message);
     } finally {
-      setChargementPack(null);
+      setAchatEnCours(false);
     }
   };
 
@@ -78,7 +112,7 @@ export default function PortefeuilleScreen({ navigation }) {
                 style={{ flex: 1 }}
         data={mouvements}
         keyExtractor={(m) => String(m.id)}
-        contentContainerStyle={{ padding: 20, paddingTop: 0 }}
+        contentContainerStyle={{ padding: 20, paddingTop: 0, paddingBottom: HAUTEUR_BARRE_ONGLETS + 20 }}
         renderItem={({ item }) => {
           const positif = item.montant > 0;
           return (
@@ -99,23 +133,60 @@ export default function PortefeuilleScreen({ navigation }) {
         ListEmptyComponent={!chargement && <Text style={styles.vide}>Aucun mouvement pour le moment.</Text>}
       />
 
-      <Modal visible={modalOuvert} transparent animationType="slide" onRequestClose={() => setModalOuvert(false)}>
-        <Pressable style={styles.fondModal} onPress={() => setModalOuvert(false)}>
+      <Modal visible={modalOuvert} transparent animationType="slide" onRequestClose={() => { setModalOuvert(false); setPackChoisi(null); }}>
+        <Pressable style={styles.fondModal} onPress={() => { setModalOuvert(false); setPackChoisi(null); }}>
           <Pressable style={styles.modal} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitre}>Acheter des pieces</Text>
-            <Text style={styles.modalSousTitre}>Non remboursables une fois utilisees pour voter.</Text>
-            <MessageErreur message={erreur} />
-            {PACKS.map((p) => (
-              <View key={p.pieces}>
-                <PrimaryButton
-                  titre={`${p.pieces} pieces  ·  ${p.prix} FCFA`}
-                  couleur={COLORS.or}
-                  onPress={() => acheter(p)}
-                  chargement={chargementPack === p.pieces}
-                />
-                {p.bonus && <Text style={styles.bonus}>{p.bonus}</Text>}
-              </View>
-            ))}
+            {!packChoisi ? (
+              <>
+                <Text style={styles.modalTitre}>Acheter des pieces</Text>
+                <Text style={styles.modalSousTitre}>Non remboursables une fois utilisees pour voter.</Text>
+                {PACKS.map((p) => (
+                  <View key={p.pieces}>
+                    <PrimaryButton
+                      titre={`${p.pieces} pieces  ·  ${p.prix} FCFA`}
+                      couleur={COLORS.or}
+                      onPress={() => ouvrirChoixPaiement(p)}
+                    />
+                    {p.bonus && <Text style={styles.bonus}>{p.bonus}</Text>}
+                  </View>
+                ))}
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalTitre}>{packChoisi.pieces} pieces · {packChoisi.prix} FCFA</Text>
+                <Text style={styles.modalSousTitre}>Choisis ton moyen de paiement</Text>
+                <MessageErreur message={erreur} />
+                <View style={styles.moyensPaiement}>
+                  {MOYENS_PAIEMENT.map((m) => (
+                    <Pressable
+                      key={m.cle}
+                      style={[styles.moyenPaiement, moyenPaiement === m.cle && { borderColor: COLORS.or, backgroundColor: 'rgba(255,204,33,0.12)' }]}
+                      onPress={() => setMoyenPaiement(m.cle)}
+                    >
+                      <Text style={[styles.moyenPaiementTexte, moyenPaiement === m.cle && { color: COLORS.or }]}>{m.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                {MOBILE_MONEY.includes(moyenPaiement) && (
+                  <TextField
+                    placeholder="Numero Mobile Money (ex. 90000000)"
+                    value={telephonePayeur}
+                    onChangeText={setTelephonePayeur}
+                    keyboardType="phone-pad"
+                    style={{ marginBottom: 12 }}
+                  />
+                )}
+                {moyenPaiement === 'AGENCE' && (
+                  <Text style={styles.avertissementAgence}>
+                    Les pieces ne seront creditees qu'apres verification de ton paiement en agence.
+                  </Text>
+                )}
+                <PrimaryButton titre="Confirmer l'achat" couleur={COLORS.or} onPress={acheter} chargement={achatEnCours} />
+                <Pressable onPress={() => setPackChoisi(null)} style={{ marginTop: 12 }}>
+                  <Text style={styles.lienRetour}>← Changer de pack</Text>
+                </Pressable>
+              </>
+            )}
           </Pressable>
         </Pressable>
       </Modal>
@@ -147,4 +218,9 @@ const styles = StyleSheet.create({
   modalTitre: { color: '#fff', fontSize: 18, fontWeight: '800' },
   modalSousTitre: { color: COLORS.texteAtténué, fontSize: 12, marginTop: 4, marginBottom: 16 },
   bonus: { color: COLORS.or, fontSize: 11, textAlign: 'center', marginTop: -6, marginBottom: 10 },
+  moyensPaiement: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  moyenPaiement: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: COLORS.bordure, backgroundColor: 'rgba(255,255,255,0.05)' },
+  moyenPaiementTexte: { color: COLORS.texteAtténué, fontSize: 12, fontWeight: '600' },
+  avertissementAgence: { color: COLORS.or, fontSize: 11, marginBottom: 12, lineHeight: 16 },
+  lienRetour: { color: COLORS.texteAtténué, fontSize: 12, textAlign: 'center' },
 });

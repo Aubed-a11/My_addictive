@@ -244,6 +244,16 @@ public class LiveService {
         chaineRepository.save(chaine);
     }
 
+    /** Desabonnement (l'inverse de abonner ci-dessus) : decremente le compteur d'abonnes, sans effet si deja non-abonne. */
+    public void desabonner(Long utilisateurId, Long chaineId) {
+        abonnementChaineRepository.findByUtilisateurIdAndChaineId(utilisateurId, chaineId).ifPresent(abonnement -> {
+            abonnementChaineRepository.delete(abonnement);
+            Chaine chaine = obtenirChaine(chaineId);
+            chaine.setNombreAbonnes(Math.max(0, chaine.getNombreAbonnes() - 1));
+            chaineRepository.save(chaine);
+        });
+    }
+
     /** Chaines suivies par l'utilisateur (recommandations, section 4.2). */
     public List<Chaine> mesChainesSuivies(Long utilisateurId) {
         return abonnementChaineRepository.findByUtilisateurId(utilisateurId).stream()
@@ -257,14 +267,15 @@ public class LiveService {
      * anticipe, contenu exclusif. Initie le paiement ; l'abonnement n'est
      * cree/prolonge qu'a la confirmation (voir confirmerAbonnementFanClub).
      */
-    public Map<String, Object> initierAbonnementFanClub(String userId, Long chaineId) {
+    public Map<String, Object> initierAbonnementFanClub(String userId, Long chaineId, String moyenPaiement, String telephonePayeur) {
         obtenirChaine(chaineId);
-        Map<String, Object> corps = Map.of(
-                "moyenPaiement", "MTN_MOMO",
+        Map<String, Object> corps = new java.util.HashMap<>(Map.of(
+                "moyenPaiement", moyenPaiement,
                 "montantFcfa", PRIX_FAN_CLUB_MENSUEL_FCFA,
                 "typeObjet", "FAN_CLUB",
                 "referenceId", String.valueOf(chaineId)
-        );
+        ));
+        if (telephonePayeur != null) corps.put("telephonePayeur", telephonePayeur);
         return webClientBuilder.build().post()
                 .uri("http://paiement-service/api/paiement/transactions")
                 .header("X-User-Id", userId)

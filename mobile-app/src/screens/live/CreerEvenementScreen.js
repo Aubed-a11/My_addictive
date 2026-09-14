@@ -8,6 +8,7 @@ import MessageErreur from '../../components/MessageErreur';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../theme/colors';
 import BottomTabBar from '../../components/BottomTabBar';
+import EnteteLogo from '../../components/EnteteLogo';
 
 /**
  * Creation d'evenement en auto-service (section 6.1) : un organisateur peut
@@ -20,6 +21,8 @@ export default function CreerEvenementScreen({ navigation }) {
   const [lieu, setLieu] = useState('');
   const [dateDebut, setDateDebut] = useState('');
   const [prixStandard, setPrixStandard] = useState('5000');
+  const [capaciteStandard, setCapaciteStandard] = useState('');
+  const [capaciteVip, setCapaciteVip] = useState('');
   const [erreur, setErreur] = useState(null);
   const [message, setMessage] = useState(null);
   const [chargement, setChargement] = useState(false);
@@ -27,6 +30,7 @@ export default function CreerEvenementScreen({ navigation }) {
   if (!estConnecte) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
+        <EnteteLogo />
         <View style={styles.centre}>
           <Text style={styles.titrePage}>Creer un evenement</Text>
           <Text style={styles.sousTitre}>Organisez et diffusez votre propre spectacle sur My Addictive.</Text>
@@ -54,10 +58,12 @@ export default function CreerEvenementScreen({ navigation }) {
         payant: true,
         prixStandardFcfa: Number(prixStandard) || 0,
         prixVipFcfa: (Number(prixStandard) || 0) * 3,
+        capaciteStandard: capaciteStandard.trim() ? Number(capaciteStandard) : null,
+        capaciteVip: capaciteVip.trim() ? Number(capaciteVip) : null,
       };
       await client.post('/api/live/evenements', corps);
       setMessage('Evenement cree ! Retrouvez-le dans la liste des evenements a venir.');
-      setTitre(''); setLieu(''); setDateDebut('');
+      setTitre(''); setLieu(''); setDateDebut(''); setCapaciteStandard(''); setCapaciteVip('');
     } catch (e) {
       setErreur(e.message);
     } finally {
@@ -67,6 +73,7 @@ export default function CreerEvenementScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <EnteteLogo />
       <View style={{ padding: 20 }}>
         <Text style={styles.titrePage}>Creer un evenement</Text>
         <Text style={styles.sousTitre}>Organisez et diffusez votre propre spectacle sur My Addictive.</Text>
@@ -75,6 +82,8 @@ export default function CreerEvenementScreen({ navigation }) {
         <TextField label="Lieu" value={lieu} onChangeText={setLieu} placeholder="Ex. Palais des Congres, Cotonou" />
         <TextField label="Date et heure (AAAA-MM-JJ HH:MM)" value={dateDebut} onChangeText={setDateDebut} placeholder="2026-12-20 20:00" />
         <TextField label="Prix standard (FCFA)" value={prixStandard} onChangeText={setPrixStandard} keyboardType="number-pad" />
+        <TextField label="Capacite standard (optionnel, vide = illimite)" value={capaciteStandard} onChangeText={setCapaciteStandard} keyboardType="number-pad" placeholder="Ex. 200" />
+        <TextField label="Capacite VIP (optionnel, vide = illimite)" value={capaciteVip} onChangeText={setCapaciteVip} keyboardType="number-pad" placeholder="Ex. 30" />
 
         <MessageErreur message={erreur} />
         {message && <Text style={styles.message}>{message}</Text>}

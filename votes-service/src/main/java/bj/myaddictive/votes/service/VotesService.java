@@ -144,12 +144,13 @@ public class VotesService {
 
     /** Achat de pieces (section 7.1) : delegue au paiement-service, credite au consumer RabbitMQ apres confirmation. */
     public Map<String, Object> initierAchatPieces(String userId, AcheterPiecesRequest requete) {
-        Map<String, Object> corps = Map.of(
+        Map<String, Object> corps = new java.util.HashMap<>(Map.of(
                 "moyenPaiement", requete.moyenPaiement(),
                 "montantFcfa", requete.montantFcfa(),
                 "typeObjet", "PORTEFEUILLE_PIECES",
                 "referenceId", String.valueOf(requete.nombrePieces())
-        );
+        ));
+        if (requete.telephonePayeur() != null) corps.put("telephonePayeur", requete.telephonePayeur());
         return webClientBuilder.build().post()
                 .uri("http://paiement-service/api/paiement/transactions")
                 .header("X-User-Id", userId)

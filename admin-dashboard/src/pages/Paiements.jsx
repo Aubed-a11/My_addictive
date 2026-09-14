@@ -5,8 +5,12 @@ import client from '../api/client';
 const LIBELLES_TYPE_OBJET = {
   BILLET: 'Billet evenement',
   TITRE: 'Achat titre',
-  VOTE: 'Recharge pieces (votes)',
+  ALBUM: 'Achat album',
+  PORTEFEUILLE_PIECES: 'Recharge de pieces (votes)',
   COMMANDE: 'Commande boutique',
+  ABONNEMENT_CHAINE: 'Abonnement chaine',
+  FAN_CLUB: 'Fan club',
+  REPLAY: 'Acces replay',
 };
 
 /**
