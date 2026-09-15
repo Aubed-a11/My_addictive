@@ -16,6 +16,7 @@ import Chaines from './pages/Chaines';
 import Podcasts from './pages/Podcasts';
 import Paiements from './pages/Paiements';
 import ScannerBillets from './pages/ScannerBillets';
+import Commandes from './pages/Commandes';
 
 function MiseEnPage({ children }) {
   return (
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="/podcasts" element={<ProtectedRoute><MiseEnPage><Podcasts /></MiseEnPage></ProtectedRoute>} />
           <Route path="/paiements" element={<ProtectedRoute><MiseEnPage><Paiements /></MiseEnPage></ProtectedRoute>} />
           <Route path="/scanner-billets" element={<ProtectedRoute><MiseEnPage><ScannerBillets /></MiseEnPage></ProtectedRoute>} />
+          <Route path="/commandes" element={<ProtectedRoute><MiseEnPage><Commandes /></MiseEnPage></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Trash2 } from 'lucide-react-native';
+import { Trash2, Minus, Plus } from 'lucide-react-native';
 import client from '../../api/client';
 import PrimaryButton from '../../components/PrimaryButton';
+import TextField from '../../components/TextField';
 import MessageErreur from '../../components/MessageErreur';
 import { COLORS } from '../../theme/colors';
 import { resoudreUrlImage } from '../../utils/urlImage';
@@ -11,12 +12,23 @@ import IconePlaceholder from '../../components/IconePlaceholder';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
 
+const MOYENS_PAIEMENT = [
+  { cle: 'MTN_MOMO', label: 'MTN Mobile Money' },
+  { cle: 'MOOV_MONEY', label: 'Moov Money' },
+  { cle: 'CELTIIS_CASH', label: 'Celtiis Cash' },
+  { cle: 'CARTE_BANCAIRE', label: 'Carte bancaire' },
+  { cle: 'AGENCE', label: 'Paiement en agence' },
+];
+const MOBILE_MONEY = ['MTN_MOMO', 'MOOV_MONEY', 'CELTIIS_CASH'];
+
 /** Panier multi-vendeurs (section 8.1) : la repartition entre vendeurs se fait automatiquement cote serveur. */
 export default function PanierScreen({ navigation }) {
   const [items, setItems] = useState([]);
   const [erreur, setErreur] = useState(null);
   const [message, setMessage] = useState(null);
   const [validation, setValidation] = useState(false);
+  const [moyenPaiement, setMoyenPaiement] = useState('MTN_MOMO');
+  const [telephonePayeur, setTelephonePayeur] = useState('');
 
   const charger = useCallback(async () => {
     const { data } = await client.get('/api/boutique/panier');
@@ -30,12 +42,39 @@ export default function PanierScreen({ navigation }) {
     charger();
   };
 
+  // Mise a jour optimiste (l'affichage change avant la reponse serveur) pour que les boutons +/- semblent instantanes.
+  const modifierQuantite = async (item, delta) => {
+    const nouvelleQuantite = item.quantite + delta;
+    if (nouvelleQuantite < 1) { retirer(item.id); return; }
+    setItems((precedent) => precedent.map((i) => (i.id === item.id ? { ...i, quantite: nouvelleQuantite } : i)));
+    try {
+      await client.put(`/api/boutique/panier/${item.id}`, { quantite: nouvelleQuantite });
+    } catch {
+      charger(); // en cas d'echec (ex. stock insuffisant), on resynchronise avec la vraie valeur serveur
+    }
+  };
+
   const valider = async () => {
+    if (MOBILE_MONEY.includes(moyenPaiement) && telephonePayeur.trim().length < 8) {
+      setErreur('Merci de renseigner un numero de telephone Mobile Money valide.');
+      return;
+    }
     setErreur(null);
     setValidation(true);
     try {
-      await client.post('/api/boutique/commandes/initier', { moyenPaiement: 'MTN_MOMO' });
-      setMessage('Commande payee avec succes ! Retrouvez-la dans "Mes commandes".');
+      const { data: transaction } = await client.post('/api/boutique/commandes/initier', {
+        moyenPaiement,
+        telephonePayeur: MOBILE_MONEY.includes(moyenPaiement) ? telephonePayeur.trim() : undefined,
+      });
+      if (transaction.statut === 'REUSSI') {
+        setMessage('Commande payee avec succes ! Retrouvez-la dans "Mes commandes".');
+      } else if (moyenPaiement === 'AGENCE') {
+        setMessage("Demande enregistree. Presentez-vous a l'agence pour regler le montant : votre commande sera confirmee une fois le paiement verifie par un agent.");
+      } else if (MOBILE_MONEY.includes(moyenPaiement)) {
+        setMessage('Une demande de paiement a ete envoyee sur votre telephone. Validez-la avec votre code PIN Mobile Money : votre commande sera confirmee des reception.');
+      } else {
+        setMessage('Paiement en cours de verification. Votre commande sera confirmee des sa validation.');
+      }
       charger();
     } catch (e) {
       setErreur(e.message);
@@ -66,7 +105,15 @@ export default function PanierScreen({ navigation }) {
             )}
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={styles.nomProduit} numberOfLines={1}>{item.nomProduit}</Text>
-              <Text style={styles.quantiteTexte}>Quantite : {item.quantite}</Text>
+              <View style={styles.ligneQuantite}>
+                <Pressable style={styles.boutonQuantite} onPress={() => modifierQuantite(item, -1)}>
+                  <Minus size={14} color="#fff" />
+                </Pressable>
+                <Text style={styles.quantiteTexte}>{item.quantite}</Text>
+                <Pressable style={styles.boutonQuantite} onPress={() => modifierQuantite(item, 1)}>
+                  <Plus size={14} color="#fff" />
+                </Pressable>
+              </View>
               <Text style={styles.prixLigne}>{item.prixFcfaProduit * item.quantite} FCFA</Text>
             </View>
             <Pressable onPress={() => retirer(item.id)} style={styles.boutonRetirer}>
@@ -82,6 +129,34 @@ export default function PanierScreen({ navigation }) {
             <Text style={styles.libelleTotal}>Total</Text>
             <Text style={styles.valeurTotal}>{total} FCFA</Text>
           </View>
+
+          <Text style={styles.libelleMoyenPaiement}>Moyen de paiement</Text>
+          <View style={styles.moyensPaiement}>
+            {MOYENS_PAIEMENT.map((m) => (
+              <Pressable
+                key={m.cle}
+                style={[styles.moyenPaiement, moyenPaiement === m.cle && { borderColor: COLORS.boutique, backgroundColor: 'rgba(217,119,6,0.15)' }]}
+                onPress={() => setMoyenPaiement(m.cle)}
+              >
+                <Text style={[styles.moyenPaiementTexte, moyenPaiement === m.cle && { color: COLORS.boutique }]}>{m.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+          {MOBILE_MONEY.includes(moyenPaiement) && (
+            <TextField
+              placeholder="Numero Mobile Money (ex. 90000000)"
+              value={telephonePayeur}
+              onChangeText={setTelephonePayeur}
+              keyboardType="phone-pad"
+              style={{ marginBottom: 10 }}
+            />
+          )}
+          {moyenPaiement === 'AGENCE' && (
+            <Text style={styles.avertissementAgence}>
+              La commande ne sera confirmee qu'apres verification de votre paiement en agence par un agent.
+            </Text>
+          )}
+
           <PrimaryButton titre="Passer commande" couleur={COLORS.boutique} onPress={valider} chargement={validation} />
         </View>
       )}
@@ -99,11 +174,18 @@ const styles = StyleSheet.create({
   ligne: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.fondCarte, borderRadius: 12, padding: 10, marginBottom: 10 },
   image: { width: 56, height: 56, borderRadius: 8 },
   nomProduit: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  quantiteTexte: { color: COLORS.texteAtténué, fontSize: 12, marginTop: 2 },
+  ligneQuantite: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 },
+  boutonQuantite: { width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
+  quantiteTexte: { color: '#fff', fontWeight: '700', fontSize: 13, minWidth: 16, textAlign: 'center' },
   prixLigne: { color: COLORS.boutique, fontWeight: '700', fontSize: 13, marginTop: 4 },
   boutonRetirer: { padding: 6 },
   pied: { padding: 16, borderTopWidth: 1, borderTopColor: COLORS.bordure },
   ligneTotal: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   libelleTotal: { color: COLORS.texteAtténué, fontSize: 14 },
   valeurTotal: { color: '#fff', fontWeight: '800', fontSize: 18 },
+  libelleMoyenPaiement: { color: '#fff', fontWeight: '600', fontSize: 13, marginBottom: 8 },
+  moyensPaiement: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+  moyenPaiement: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: COLORS.bordure, backgroundColor: 'rgba(255,255,255,0.05)' },
+  moyenPaiementTexte: { color: COLORS.texteAtténué, fontSize: 12, fontWeight: '600' },
+  avertissementAgence: { color: COLORS.or, fontSize: 11, marginBottom: 10, lineHeight: 16 },
 });

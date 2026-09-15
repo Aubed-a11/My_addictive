@@ -48,6 +48,14 @@ public class PanierController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/panier/{id}")
+    public ResponseEntity<PanierItem> modifierQuantite(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @PathVariable Long id, @RequestBody Map<String, Integer> corps) {
+        int quantite = corps.getOrDefault("quantite", 1);
+        return ResponseEntity.ok(boutiqueService.modifierQuantitePanier(exiger(userId), id, quantite));
+    }
+
     @PostMapping("/commandes/initier")
     public ResponseEntity<Map<String, Object>> initierCommande(
             @RequestHeader(value = "X-User-Id", required = false) String userId,
@@ -64,5 +72,27 @@ public class PanierController {
     @GetMapping("/commandes/{id}/lignes")
     public ResponseEntity<List<LigneCommande>> lignes(@PathVariable Long id) {
         return ResponseEntity.ok(boutiqueService.lignesDeCommande(id));
+    }
+
+    /** Vue d'ensemble de toutes les commandes, tous acheteurs confondus, reservee aux administrateurs (gestion de la logistique). */
+    @GetMapping("/commandes/admin")
+    public ResponseEntity<List<Commande>> toutesLesCommandes(@RequestHeader(value = "X-User-Role", required = false) String role) {
+        exigerAdministrateur(role);
+        return ResponseEntity.ok(boutiqueService.toutesLesCommandes());
+    }
+
+    /** Mise a jour du statut de livraison d'une ligne de commande precise (section 8.1), reservee aux administrateurs. */
+    @PutMapping("/commandes/lignes/{ligneId}/statut-livraison")
+    public ResponseEntity<LigneCommande> modifierStatutLivraison(
+            @RequestHeader(value = "X-User-Role", required = false) String role,
+            @PathVariable Long ligneId, @RequestBody Map<String, String> corps) {
+        exigerAdministrateur(role);
+        return ResponseEntity.ok(boutiqueService.modifierStatutLivraison(ligneId, corps.get("statutLivraison")));
+    }
+
+    private void exigerAdministrateur(String role) {
+        if (!"ADMINISTRATEUR".equals(role)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Reserve aux administrateurs.");
+        }
     }
 }

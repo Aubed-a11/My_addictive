@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Ticket, Trophy, Newspaper, Music, ShoppingBag, Store, Users, Radio, Mic, Wallet, QrCode, LogOut } from 'lucide-react';
+import { LayoutDashboard, Ticket, Trophy, Newspaper, Music, ShoppingBag, Store, Users, Radio, Mic, Wallet, QrCode, ClipboardList, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const LIENS = [
@@ -13,6 +13,7 @@ const LIENS = [
   { chemin: '/articles', label: 'Media & actualites', Icone: Newspaper },
   { chemin: '/musique', label: 'Musique', Icone: Music },
   { chemin: '/boutique', label: 'Boutique', Icone: ShoppingBag },
+  { chemin: '/commandes', label: 'Commandes', Icone: ClipboardList },
   { chemin: '/vendeurs', label: 'Vendeurs', Icone: Store },
   { chemin: '/paiements', label: 'Paiements en agence', Icone: Wallet },
   { chemin: '/utilisateurs', label: 'Utilisateurs', Icone: Users },

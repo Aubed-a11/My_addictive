@@ -159,6 +159,16 @@ public class BoutiqueService {
         panierItemRepository.delete(item);
     }
 
+    /** Ajuste la quantite d'un article deja present dans le panier (section 8.1) : jamais en-dessous de 1, retirer explicitement l'article sinon. */
+    public PanierItem modifierQuantitePanier(Long utilisateurId, Long panierItemId, int nouvelleQuantite) {
+        if (nouvelleQuantite < 1) throw new ApiException(HttpStatus.BAD_REQUEST, "La quantite doit etre d'au moins 1 (retirez l'article pour l'enlever du panier).");
+        PanierItem item = panierItemRepository.findById(panierItemId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Article introuvable dans le panier."));
+        if (!item.getUtilisateurId().equals(utilisateurId)) throw new ApiException(HttpStatus.FORBIDDEN, "Cet article n'appartient pas a votre panier.");
+        item.setQuantite(nouvelleQuantite);
+        return panierItemRepository.save(item);
+    }
+
     /**
      * Valide le panier (potentiellement multi-vendeurs) : cree la Commande et
      * ses LigneCommande en EN_ATTENTE, puis delegue le paiement. La commande
@@ -196,12 +206,13 @@ public class BoutiqueService {
         commandeRepository.save(commande);
         panierItemRepository.deleteByUtilisateurId(utilisateurId);
 
-        Map<String, Object> corps = Map.of(
+        Map<String, Object> corps = new java.util.HashMap<>(Map.of(
                 "moyenPaiement", requete.moyenPaiement(),
                 "montantFcfa", total,
                 "typeObjet", "COMMANDE",
                 "referenceId", String.valueOf(commande.getId())
-        );
+        ));
+        if (requete.telephonePayeur() != null) corps.put("telephonePayeur", requete.telephonePayeur());
         return webClientBuilder.build().post()
                 .uri("http://paiement-service/api/paiement/transactions")
                 .header("X-User-Id", userId)
@@ -213,6 +224,23 @@ public class BoutiqueService {
 
     public List<Commande> mesCommandes(Long utilisateurId) {
         return commandeRepository.findByUtilisateurIdOrderByDateCommandeDesc(utilisateurId);
+    }
+
+    public List<Commande> toutesLesCommandes() {
+        return commandeRepository.findAllByOrderByDateCommandeDesc();
+    }
+
+    public LigneCommande modifierStatutLivraison(Long ligneId, String statutBrut) {
+        LigneCommande ligne = ligneCommandeRepository.findById(ligneId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Ligne de commande introuvable."));
+        StatutLivraison statut;
+        try {
+            statut = StatutLivraison.valueOf(statutBrut);
+        } catch (Exception e) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Statut de livraison invalide.");
+        }
+        ligne.setStatutLivraison(statut);
+        return ligneCommandeRepository.save(ligne);
     }
 
     public List<LigneCommande> lignesDeCommande(Long commandeId) {

@@ -8,6 +8,7 @@ import { COLORS } from '../../theme/colors';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
 
 const LIBELLES_STATUT_LIVRAISON = { EN_PREPARATION: 'En preparation', EXPEDIE: 'Expedie', LIVRE: 'Livre' };
+const LIBELLES_STATUT_COMMANDE = { EN_ATTENTE: 'En attente de paiement', PAYEE: 'Payee', ECHOUEE: 'Echouee' };
 
 /** Historique des commandes, avec detail des articles par ligne (panier multi-vendeurs, section 8.1). */
 export default function MesCommandesScreen({ navigation }) {
@@ -45,7 +46,7 @@ export default function MesCommandesScreen({ navigation }) {
             <View style={styles.enteteCarte}>
               <View>
                 <Text style={styles.carteTitre}>Commande #{item.id}</Text>
-                <Text style={styles.carteMeta}>{item.montantTotalFcfa} FCFA  ·  {item.statut}  ·  {new Date(item.dateCommande).toLocaleDateString('fr-FR')}</Text>
+                <Text style={styles.carteMeta}>{item.montantTotalFcfa} FCFA  ·  <Text style={{ color: item.statut === 'PAYEE' ? COLORS.musique : item.statut === 'ECHOUEE' ? '#F87171' : COLORS.or }}>{LIBELLES_STATUT_COMMANDE[item.statut] || item.statut}</Text>  ·  {new Date(item.dateCommande).toLocaleDateString('fr-FR')}</Text>
               </View>
               {commandeOuverte === item.id ? <ChevronUp color={COLORS.texteAtténué} size={18} /> : <ChevronDown color={COLORS.texteAtténué} size={18} />}
             </View>

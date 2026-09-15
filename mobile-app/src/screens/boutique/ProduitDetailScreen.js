@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Pressable, Image, ScrollView } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, Pressable, Image, ScrollView, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Store, Minus, Plus, Heart } from 'lucide-react-native';
+import { Store, Minus, Plus, Heart, Share2, Flame } from 'lucide-react-native';
 import client from '../../api/client';
 import PrimaryButton from '../../components/PrimaryButton';
 import MessageErreur from '../../components/MessageErreur';
 import CompteARebours from '../../components/CompteARebours';
+import ConfettiVote from '../../components/ConfettiVote';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../theme/colors';
 import { resoudreUrlImage } from '../../utils/urlImage';
@@ -25,6 +26,8 @@ export default function ProduitDetailScreen({ navigation, route }) {
   const [chargement, setChargement] = useState(false);
   const [favori, setFavori] = useState(false);
   const [favoriId, setFavoriId] = useState(null);
+  const [confettis, setConfettis] = useState([]);
+  const confettiIdRef = useRef(0);
 
   useEffect(() => {
     (async () => {
@@ -64,7 +67,7 @@ export default function ProduitDetailScreen({ navigation, route }) {
 
   const dropPasEncoreDisponible = produit?.dropLimite && produit.dateDebutDrop && new Date(produit.dateDebutDrop) > new Date();
 
-  const ajouterAuPanier = async () => {
+  const ajouterAuPanier = async (evenement) => {
     if (!estConnecte) {
       navigation.navigate('Connexion', { returnTo: 'ProduitDetail', returnToParams: { id } });
       return;
@@ -74,11 +77,29 @@ export default function ProduitDetailScreen({ navigation, route }) {
     try {
       await client.post('/api/boutique/panier', { produitId: id, quantite });
       setMessage('Ajoute au panier.');
+      if (evenement?.nativeEvent) {
+        const { pageX, pageY } = evenement.nativeEvent;
+        const confettiId = confettiIdRef.current++;
+        setConfettis((precedent) => [...precedent, { confettiId, x: pageX, y: pageY }]);
+      }
     } catch (e) {
       setErreur(e.message);
     } finally {
       setChargement(false);
     }
+  };
+
+  const retirerConfetti = (confettiId) => {
+    setConfettis((precedent) => precedent.filter((c) => c.confettiId !== confettiId));
+  };
+
+  const partager = async () => {
+    try {
+      await Share.share({
+        message: `${produit.nom} - ${produit.prixFcfa} FCFA sur My Addictive !`,
+        title: produit.nom,
+      });
+    } catch {}
   };
 
   if (!produit) return <ActivityIndicator color={COLORS.boutique} style={{ marginTop: 40 }} />;
@@ -97,6 +118,9 @@ export default function ProduitDetailScreen({ navigation, route }) {
           <Pressable style={styles.boutonCoeur} onPress={basculerFavori}>
             <Heart size={18} color={favori ? COLORS.boutique : '#fff'} fill={favori ? COLORS.boutique : 'none'} />
           </Pressable>
+          <Pressable style={[styles.boutonCoeur, { right: 62 }]} onPress={partager}>
+            <Share2 size={18} color="#fff" />
+          </Pressable>
         </View>
 
         <View style={{ padding: 20 }}>
@@ -114,6 +138,12 @@ export default function ProduitDetailScreen({ navigation, route }) {
           )}
           <Text style={styles.prix}>{produit.prixFcfa} FCFA</Text>
           <Text style={styles.stock}>{produit.stock > 0 ? `${produit.stock} en stock` : 'Rupture de stock'}</Text>
+          {produit.stock > 0 && produit.stock <= 5 && (
+            <View style={styles.badgeUrgenceStock}>
+              <Flame size={11} color="#fff" />
+              <Text style={styles.badgeUrgenceStockTexte}>Plus que {produit.stock} en stock !</Text>
+            </View>
+          )}
           {produit.description && <Text style={styles.description}>{produit.description}</Text>}
 
           {dropPasEncoreDisponible && (
@@ -142,12 +172,15 @@ export default function ProduitDetailScreen({ navigation, route }) {
           <PrimaryButton
             titre={dropPasEncoreDisponible ? 'Pas encore en vente' : `Ajouter au panier · ${produit.prixFcfa * quantite} FCFA`}
             couleur={COLORS.boutique}
-            onPress={ajouterAuPanier}
+            onPress={(e) => ajouterAuPanier(e)}
             chargement={chargement}
             disabled={produit.stock <= 0 || dropPasEncoreDisponible}
           />
         </View>
       </ScrollView>
+      {confettis.map((c) => (
+        <ConfettiVote key={c.confettiId} x={c.x} y={c.y} onTermine={() => retirerConfetti(c.confettiId)} />
+      ))}
     <BottomTabBar navigation={navigation} variante="boutique" ongletActif="rubrique" />
       </SafeAreaView>
     </LinearGradient>
@@ -165,6 +198,8 @@ const styles = StyleSheet.create({
   venduPar: { color: COLORS.boutique, fontSize: 13, fontWeight: '600' },
   prix: { color: COLORS.boutique, fontSize: 20, fontWeight: '700', marginTop: 8 },
   stock: { color: COLORS.texteAtténué, fontSize: 12, marginTop: 6, marginBottom: 14 },
+  badgeUrgenceStock: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: '#F97316', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginTop: -8, marginBottom: 14 },
+  badgeUrgenceStockTexte: { color: '#fff', fontSize: 10, fontWeight: '800' },
   description: { color: COLORS.texteAtténué, fontSize: 14, lineHeight: 20, marginBottom: 20 },
   carteCompteARebours: { backgroundColor: COLORS.fondCarte, borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: COLORS.or },
   compteARebLabel: { color: COLORS.texteAtténué, fontSize: 12 },

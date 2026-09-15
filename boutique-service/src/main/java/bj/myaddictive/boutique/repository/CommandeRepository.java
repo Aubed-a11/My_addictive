@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface CommandeRepository extends JpaRepository<Commande, Long> {
     List<Commande> findByUtilisateurIdOrderByDateCommandeDesc(Long utilisateurId);
+    List<Commande> findAllByOrderByDateCommandeDesc();
 }
