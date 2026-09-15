@@ -1,11 +1,12 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Ticket, Trophy, Newspaper, Music, ShoppingBag, Store, Users, Radio, Mic, Wallet, LogOut } from 'lucide-react';
+import { LayoutDashboard, Ticket, Trophy, Newspaper, Music, ShoppingBag, Store, Users, Radio, Mic, Wallet, QrCode, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const LIENS = [
   { chemin: '/', label: 'Tableau de bord', Icone: LayoutDashboard },
   { chemin: '/evenements', label: 'Evenements', Icone: Ticket },
+  { chemin: '/scanner-billets', label: 'Scanner les billets', Icone: QrCode },
   { chemin: '/chaines', label: 'Chaines', Icone: Radio },
   { chemin: '/podcasts', label: 'Podcasts', Icone: Mic },
   { chemin: '/competitions', label: 'Competitions & Votes', Icone: Trophy },

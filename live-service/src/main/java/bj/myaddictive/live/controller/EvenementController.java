@@ -119,7 +119,10 @@ public class EvenementController {
     }
 
     @PostMapping("/billets/scanner/{codeQr}")
-    public ResponseEntity<Billet> scanner(@PathVariable String codeQr) {
+    public ResponseEntity<Billet> scanner(
+            @RequestHeader(value = "X-User-Role", required = false) String role,
+            @PathVariable String codeQr) {
+        exigerAdministrateur(role);
         return ResponseEntity.ok(liveService.scannerBillet(codeQr));
     }
 
