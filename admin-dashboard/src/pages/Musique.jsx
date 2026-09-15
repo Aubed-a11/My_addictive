@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import client from '../api/client';
 
-const TITRE_VIDE = { nom: '', artiste: '', genre: '', fichierAudioUrl: '', imageUrl: '', gratuit: true, prixFcfa: 0 };
+const TITRE_VIDE = { nom: '', artiste: '', genre: '', fichierAudioUrl: '', imageUrl: '', gratuit: true, prixFcfa: 0, youtubeUrl: '' };
 const ALBUM_VIDE = { titre: '', artiste: '', genre: '', imageUrl: '', dateSortie: '' };
 
 export default function Musique() {
@@ -113,6 +113,10 @@ export default function Musique() {
               {!formulaire.gratuit && (
                 <div className="champ"><label>Prix (FCFA)</label><input type="number" value={formulaire.prixFcfa || 0} onChange={(e) => setFormulaire({ ...formulaire, prixFcfa: Number(e.target.value) })} /></div>
               )}
+            </div>
+            <div className="champ">
+              <label>URL du clip YouTube (optionnel, pour la section "Brand New" de l'accueil)</label>
+              <input value={formulaire.youtubeUrl || ''} onChange={(e) => setFormulaire({ ...formulaire, youtubeUrl: e.target.value })} placeholder="https://www.youtube.com/watch?v=..." />
             </div>
             {erreur && <div className="erreur">{erreur}</div>}
             <div style={{ display: 'flex', gap: 10 }}>

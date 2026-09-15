@@ -52,6 +52,12 @@ public class MusiqueController {
         return ResponseEntity.ok(musiqueService.listerAlbums(pageable));
     }
 
+    /** Section "Brand New" (accueil Musique) : derniers titres avec clip officiel. */
+    @GetMapping("/titres/nouveautes")
+    public ResponseEntity<Page<Titre>> nouveautes(Pageable pageable) {
+        return ResponseEntity.ok(musiqueService.nouveautes(pageable));
+    }
+
     @GetMapping("/albums/{id}")
     public ResponseEntity<Album> obtenirAlbum(@PathVariable Long id) {
         return ResponseEntity.ok(musiqueService.obtenirAlbum(id));

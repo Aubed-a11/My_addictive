@@ -43,6 +43,12 @@ public class Titre {
     @Column(name = "compteur_telechargements", nullable = false)
     private Long compteurTelechargements = 0L;
 
+    @Column(name = "youtube_url")
+    private String youtubeUrl; // clip officiel, pour la section "Brand New" (accueil Musique)
+
+    @Column(name = "date_ajout")
+    private java.time.Instant dateAjout = java.time.Instant.now(); // sert a trier les nouveautes par ordre chronologique reel, pas par id (peu fiable sur des donnees importees en masse)
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getNom() { return nom; }
@@ -67,4 +73,8 @@ public class Titre {
     public void setCompteurEcoutes(Long compteurEcoutes) { this.compteurEcoutes = compteurEcoutes; }
     public Long getCompteurTelechargements() { return compteurTelechargements; }
     public void setCompteurTelechargements(Long compteurTelechargements) { this.compteurTelechargements = compteurTelechargements; }
+    public String getYoutubeUrl() { return youtubeUrl; }
+    public void setYoutubeUrl(String youtubeUrl) { this.youtubeUrl = youtubeUrl; }
+    public java.time.Instant getDateAjout() { return dateAjout; }
+    public void setDateAjout(java.time.Instant dateAjout) { this.dateAjout = dateAjout; }
 }

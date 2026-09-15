@@ -12,6 +12,7 @@ import IconePlaceholder from '../../components/IconePlaceholder';
 import BarreRecherche from '../../components/BarreRecherche';
 import MusiqueCarousel from '../../components/MusiqueCarousel';
 import TousLesTops from '../../components/TousLesTops';
+import BrandNew from '../../components/BrandNew';
 
 const ONGLETS = [
   { cle: 'gratuit', label: 'Free Music' },
@@ -107,6 +108,7 @@ export default function MusiqueHomeScreen({ navigation }) {
       </View>
 
       <MusiqueCarousel navigation={navigation} />
+      <BrandNew navigation={navigation} />
       <TousLesTops navigation={navigation} />
       <View style={styles.onglets}>
         {ONGLETS.map((o) => (

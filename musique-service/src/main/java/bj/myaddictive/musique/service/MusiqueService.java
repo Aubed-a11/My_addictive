@@ -78,6 +78,8 @@ public class MusiqueService {
         copie.setAlbumId(titre.getAlbumId());
         copie.setCompteurEcoutes(titre.getCompteurEcoutes());
         copie.setCompteurTelechargements(titre.getCompteurTelechargements());
+        copie.setYoutubeUrl(titre.getYoutubeUrl());
+        copie.setDateAjout(titre.getDateAjout());
         copie.setFichierAudioUrl(null);
         return copie;
     }
@@ -113,6 +115,11 @@ public class MusiqueService {
         return albumRepository.findAll(pageable);
     }
 
+    /** Section "Brand New" (accueil Musique) : derniers titres ayant un clip officiel renseigne, du plus recent au plus ancien. */
+    public Page<Titre> nouveautes(Pageable pageable) {
+        return titreRepository.findByYoutubeUrlIsNotNullOrderByDateAjoutDesc(pageable);
+    }
+
     public Album obtenirAlbum(Long id) {
         return albumRepository.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Album introuvable."));
     }
@@ -133,6 +140,7 @@ public class MusiqueService {
         titre.setDureeSecondes(donnees.getDureeSecondes());
         titre.setGratuit(donnees.isGratuit());
         titre.setPrixFcfa(donnees.getPrixFcfa());
+        titre.setYoutubeUrl(donnees.getYoutubeUrl());
         return titreRepository.save(titre);
     }
 
