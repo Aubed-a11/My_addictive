@@ -189,8 +189,14 @@ public class BoutiqueService {
 
         for (PanierItem item : items) {
             Produit produit = obtenirProduit(item.getProduitId());
-            if (produit.getStock() < item.getQuantite()) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "Stock insuffisant pour \"" + produit.getNom() + "\".");
+            // Decrement atomique et conditionnel (voir ProduitRepository) : si 0 ligne
+            // est affectee, soit le stock etait deja insuffisant, soit un autre achat
+            // vient de prendre les derniers exemplaires a l'instant meme - dans les
+            // deux cas, on annule (la transaction @Transactional annule aussi les
+            // decrements deja faits pour les articles precedents de ce meme panier).
+            int lignesAffectees = produitRepository.decrementerStockSiSuffisant(produit.getId(), item.getQuantite());
+            if (lignesAffectees == 0) {
+                throw new ApiException(HttpStatus.CONFLICT, "Stock insuffisant pour \"" + produit.getNom() + "\" (peut-etre vendu entre-temps).");
             }
             LigneCommande ligne = new LigneCommande();
             ligne.setCommandeId(commande.getId());

@@ -60,13 +60,43 @@ public class InterneController {
         commande.setTransactionId(transactionId);
         commandeRepository.save(commande);
 
-        for (LigneCommande ligne : ligneCommandeRepository.findByCommandeId(commandeId)) {
-            produitRepository.findById(ligne.getProduitId()).ifPresent(produit -> {
-                produit.setStock(Math.max(0, produit.getStock() - ligne.getQuantite()));
-                produitRepository.save(produit);
-            });
+        // Le stock a deja ete decompte atomiquement des l'initiation de la commande
+        // (voir BoutiqueService.initierCommande), pas ici : le decompter une seconde
+        // fois a la confirmation créerait un double decompte pour chaque commande.
+        log.info("Commande {} confirmee (transaction {}).", commandeId, transactionId);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Restaure le stock reserve si le paiement echoue finalement (annule
+     * par l'utilisateur, refuse par l'agregateur, expire...) : sans ce
+     * mecanisme, un stock reserve a l'initiation resterait indisponible
+     * indefiniment meme si la commande n'a jamais ete reglee.
+     */
+    @PostMapping("/paiement-echoue")
+    @Transactional
+    public ResponseEntity<Void> surPaiementEchoue(@RequestBody Map<String, Object> evenement) {
+        Long transactionId = Long.valueOf(String.valueOf(evenement.get("transactionId")));
+        Long commandeId = Long.valueOf(String.valueOf(evenement.get("referenceId")));
+
+        Commande commande = commandeRepository.findById(commandeId).orElse(null);
+        if (commande == null) {
+            log.warn("Commande {} introuvable pour la transaction echouee {}.", commandeId, transactionId);
+            return ResponseEntity.ok().build();
         }
-        log.info("Commande {} confirmee et stock decompte (transaction {}).", commandeId, transactionId);
+        if (commande.getStatut() != StatutCommande.EN_ATTENTE) {
+            log.info("Commande {} deja traitee, echec ignore (idempotence).", commandeId);
+            return ResponseEntity.ok().build();
+        }
+
+        commande.setStatut(StatutCommande.ECHOUEE);
+        commande.setTransactionId(transactionId);
+        commandeRepository.save(commande);
+
+        for (LigneCommande ligne : ligneCommandeRepository.findByCommandeId(commandeId)) {
+            produitRepository.restaurerStock(ligne.getProduitId(), ligne.getQuantite());
+        }
+        log.info("Commande {} marquee echouee, stock restaure (transaction {}).", commandeId, transactionId);
         return ResponseEntity.ok().build();
     }
 }

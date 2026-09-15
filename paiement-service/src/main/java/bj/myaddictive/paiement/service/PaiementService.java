@@ -144,6 +144,12 @@ public class PaiementService {
 
         if (transaction.getStatut() == StatutTransaction.REUSSI) {
             notifier.notifier(transaction);
+        } else if (transaction.getStatut() == StatutTransaction.ECHEC) {
+            // Necessaire notamment pour boutique-service, qui reserve le stock des
+            // l'initiation de la commande (voir BoutiqueService.initierCommande) :
+            // sans cette notification, un stock reserve pour une commande finalement
+            // non payee resterait indisponible indefiniment.
+            notifier.notifierEchec(transaction);
         }
         return transaction;
     }

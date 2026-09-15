@@ -38,6 +38,22 @@ public class PaiementConfirmeNotifier {
     }
 
     public void notifier(Transaction transaction) {
+        envoyer(transaction, "/api/interne/paiement-confirme");
+    }
+
+    /**
+     * Notifie l'echec d'un paiement, necessaire pour les services qui
+     * reservent une ressource (ex. le stock d'un produit) des l'initiation
+     * de la transaction plutot qu'a sa confirmation - sans quoi cette
+     * reservation resterait bloquee indefiniment en cas d'echec. Les
+     * services qui n'implementent pas cet endpoint (rien a restaurer)
+     * recoivent simplement un 404 sans consequence, deja gere ci-dessous.
+     */
+    public void notifierEchec(Transaction transaction) {
+        envoyer(transaction, "/api/interne/paiement-echoue");
+    }
+
+    private void envoyer(Transaction transaction, String chemin) {
         String service = resoudreService(transaction.getTypeObjet());
         if (service == null) {
             log.warn("Aucun service cible connu pour le type d'objet {}, notification ignoree.", transaction.getTypeObjet());
@@ -54,17 +70,17 @@ public class PaiementConfirmeNotifier {
 
         try {
             webClientBuilder.build().post()
-                    .uri("http://" + service + "/api/interne/paiement-confirme")
+                    .uri("http://" + service + chemin)
                     .bodyValue(corps)
                     .retrieve()
                     .toBodilessEntity()
                     .block();
-            log.info("Service {} notifie pour la transaction {} ({}).", service, transaction.getId(), transaction.getTypeObjet());
+            log.info("Service {} notifie ({}) pour la transaction {} ({}).", service, chemin, transaction.getId(), transaction.getTypeObjet());
         } catch (Exception e) {
             // En mode local sans file d'attente, un service cible indisponible perd la
             // notification (pas de re-livraison automatique). Acceptable pour un usage
             // de developpement/demo ; a durcir (retry, DLQ) avant une mise en production.
-            log.error("Echec de la notification du service {} pour la transaction {} : {}", service, transaction.getId(), e.getMessage());
+            log.error("Echec de la notification du service {} ({}) pour la transaction {} : {}", service, chemin, transaction.getId(), e.getMessage());
         }
     }
 
