@@ -1,6 +1,7 @@
 package bj.myaddictive.musique.service;
 
 import bj.myaddictive.musique.domain.Album;
+import bj.myaddictive.musique.domain.Achat;
 import bj.myaddictive.musique.domain.Ecoute;
 import bj.myaddictive.musique.domain.Titre;
 import bj.myaddictive.musique.dto.InitierAchatRequest;
@@ -39,14 +40,65 @@ public class MusiqueService {
     }
 
     public Page<Titre> listerTitres(String genre, Boolean gratuit, String artiste, Pageable pageable) {
-        if (artiste != null) return titreRepository.findByArtiste(artiste, pageable);
-        if (gratuit != null && genre != null) return titreRepository.findByGratuitAndGenre(gratuit, genre, pageable);
-        if (gratuit != null) return titreRepository.findByGratuit(gratuit, pageable);
-        return titreRepository.findAll(pageable);
+        return listerTitres(genre, gratuit, artiste, pageable, null);
+    }
+
+    /**
+     * Meme filtre que obtenirTitre(id, utilisateurId) applique a une page
+     * entiere : sans ca, parcourir simplement le catalogue (l'onglet
+     * Musique, un classement, une recherche...) suffisait a recuperer
+     * fichierAudioUrl pour tous les titres payants d'un coup, une faille
+     * bien plus grave que sur la fiche individuelle puisqu'elle s'active
+     * des l'ouverture normale de l'app, sans action particuliere.
+     */
+    public Page<Titre> listerTitres(String genre, Boolean gratuit, String artiste, Pageable pageable, Long utilisateurId) {
+        Page<Titre> page;
+        if (artiste != null) page = titreRepository.findByArtiste(artiste, pageable);
+        else if (gratuit != null && genre != null) page = titreRepository.findByGratuitAndGenre(gratuit, genre, pageable);
+        else if (gratuit != null) page = titreRepository.findByGratuit(gratuit, pageable);
+        else page = titreRepository.findAll(pageable);
+
+        java.util.Set<Long> titresAchetes = utilisateurId == null ? java.util.Set.of()
+                : achatRepository.findByUtilisateurId(utilisateurId).stream().map(Achat::getTitreId).collect(java.util.stream.Collectors.toSet());
+        return page.map(titre -> masquerSiNonAchete(titre, titresAchetes.contains(titre.getId())));
+    }
+
+    private Titre masquerSiNonAchete(Titre titre, boolean possede) {
+        if (titre.isGratuit() || possede) return titre;
+        Titre copie = new Titre();
+        copie.setId(titre.getId());
+        copie.setNom(titre.getNom());
+        copie.setArtiste(titre.getArtiste());
+        copie.setGenre(titre.getGenre());
+        copie.setImageUrl(titre.getImageUrl());
+        copie.setDureeSecondes(titre.getDureeSecondes());
+        copie.setPrixFcfa(titre.getPrixFcfa());
+        copie.setGratuit(titre.isGratuit());
+        copie.setAlbumId(titre.getAlbumId());
+        copie.setCompteurEcoutes(titre.getCompteurEcoutes());
+        copie.setCompteurTelechargements(titre.getCompteurTelechargements());
+        copie.setFichierAudioUrl(null);
+        return copie;
     }
 
     public Titre obtenirTitre(Long id) {
         return titreRepository.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Titre introuvable."));
+    }
+
+    /**
+     * Version destinee a l'API publique (fiche titre, lecteur) : masque
+     * fichierAudioUrl si le titre est payant et que l'utilisateur ne l'a
+     * pas achete (ou n'est pas connecte). Sans ce filtre, n'importe qui
+     * pouvait recuperer directement l'URL du fichier audio complet via cet
+     * endpoint, contournant entierement le systeme d'achat - le lecteur
+     * cote app ne faisait que suivre l'URL fournie, sans lui-meme verifier
+     * quoi que ce soit. Renvoie une copie non persistee : ne jamais
+     * sauvegarder l'objet retourne par cette methode.
+     */
+    public Titre obtenirTitre(Long id, Long utilisateurId) {
+        Titre titre = obtenirTitre(id);
+        boolean possede = utilisateurId != null && achatRepository.findByUtilisateurIdAndTitreId(utilisateurId, id).isPresent();
+        return masquerSiNonAchete(titre, possede);
     }
 
     @Transactional
@@ -108,10 +160,18 @@ public class MusiqueService {
     }
 
     public Page<Titre> classement(String type, Pageable pageable) {
-        return switch (type) {
+        return classement(type, pageable, null);
+    }
+
+    /** Meme filtre que listerTitres/obtenirTitre : sans lui, le classement exposait fichierAudioUrl pour tous les titres payants, quelle que soit leur possession reelle par l'utilisateur consultant. */
+    public Page<Titre> classement(String type, Pageable pageable, Long utilisateurId) {
+        Page<Titre> page = switch (type) {
             case "telechargements", "ventes" -> titreRepository.findAllByOrderByCompteurTelechargementsDesc(pageable);
             default -> titreRepository.findAllByOrderByCompteurEcoutesDesc(pageable);
         };
+        java.util.Set<Long> titresAchetes = utilisateurId == null ? java.util.Set.of()
+                : achatRepository.findByUtilisateurId(utilisateurId).stream().map(Achat::getTitreId).collect(java.util.stream.Collectors.toSet());
+        return page.map(titre -> masquerSiNonAchete(titre, titresAchetes.contains(titre.getId())));
     }
 
     /** Initie l'achat d'un titre payant : delegue au paiement-service, ne debloque rien tant que non confirme. */
@@ -164,10 +224,14 @@ public class MusiqueService {
      * streaming general.
      */
     public List<Titre> recommandations(Long utilisateurId) {
+        java.util.Set<Long> titresAchetes = achatRepository.findByUtilisateurId(utilisateurId).stream()
+                .map(Achat::getTitreId).collect(java.util.stream.Collectors.toSet());
+
         List<Ecoute> historique = mesEcoutes(utilisateurId);
         if (historique.isEmpty()) {
             return titreRepository.findAllByOrderByCompteurEcoutesDesc(
-                    org.springframework.data.domain.PageRequest.of(0, 10)).getContent();
+                    org.springframework.data.domain.PageRequest.of(0, 10)).getContent().stream()
+                    .map(t -> masquerSiNonAchete(t, titresAchetes.contains(t.getId()))).toList();
         }
 
         java.util.Set<Long> titresDejaEcoutes = new java.util.HashSet<>();
@@ -188,11 +252,13 @@ public class MusiqueService {
 
         if (genrePrefere == null) {
             return titreRepository.findAllByOrderByCompteurEcoutesDesc(
-                    org.springframework.data.domain.PageRequest.of(0, 10)).getContent();
+                    org.springframework.data.domain.PageRequest.of(0, 10)).getContent().stream()
+                    .map(t -> masquerSiNonAchete(t, titresAchetes.contains(t.getId()))).toList();
         }
 
         return titreRepository.findTop10ByGenreOrderByCompteurEcoutesDesc(genrePrefere).stream()
                 .filter(t -> !titresDejaEcoutes.contains(t.getId()))
+                .map(t -> masquerSiNonAchete(t, titresAchetes.contains(t.getId())))
                 .toList();
     }
 }

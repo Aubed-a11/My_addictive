@@ -68,6 +68,7 @@ export default function LecteurScreen({ navigation, route }) {
   const [telechargement, setTelechargement] = useState(null); // null | 'en_cours' | 'termine'
   const [minuteurActif, setMinuteurActif] = useState(null); // minutes restantes affichees, ou null
   const [erreurPochette, setErreurPochette] = useState(false);
+  const [dejaAchete, setDejaAchete] = useState(true); // optimiste par defaut (gratuit ou pas encore su) : jamais bloquant tant que non prouve necessaire
   const sonRef = React.useRef(null);
   const minuteurRef = React.useRef(null);
   const repeteActifRef = React.useRef(false);
@@ -174,6 +175,17 @@ export default function LecteurScreen({ navigation, route }) {
       client.post(`/api/musique/titres/${id}/ecouter`).catch(() => {});
       if (estConnecte) client.post(`/api/musique/titres/${id}/historiser`).catch(() => {});
       setTelechargement((await HorsLigne.estTelecharge(id)) ? 'termine' : null);
+
+      if (!data.gratuit) {
+        if (!estConnecte) {
+          setDejaAchete(false);
+        } else {
+          try {
+            const { data: achats } = await client.get('/api/musique/mes-achats');
+            setDejaAchete(achats.some((a) => a.titreId === id));
+          } catch { setDejaAchete(false); }
+        }
+      }
 
       try {
         const { data: autres } = await client.get('/api/musique/titres', { params: { artiste: data.artiste, size: 20 } });
@@ -360,7 +372,17 @@ export default function LecteurScreen({ navigation, route }) {
           </Pressable>
         </View>
 
-        {!aUnVraiSon && (
+        {!aUnVraiSon && !dejaAchete && (
+          <View style={styles.carteAchatRequis}>
+            <Text style={styles.messageApercu}>
+              Achetez ce titre ({titre.prixFcfa} FCFA) pour l'ecouter en entier.
+            </Text>
+            <Pressable style={styles.boutonAcheterRapide} onPress={() => navigation.navigate('TitreDetail', { id })}>
+              <Text style={styles.boutonAcheterRapideTexte}>Acheter</Text>
+            </Pressable>
+          </View>
+        )}
+        {!aUnVraiSon && dejaAchete && (
           <Text style={styles.messageApercu}>
             Fichier audio original non disponible pour ce titre : aperçu visuel uniquement.
           </Text>
@@ -452,6 +474,9 @@ const styles = StyleSheet.create({
   },
   boutonLectureDesactive: { opacity: 0.45 },
   messageApercu: { color: 'rgba(255,255,255,0.55)', fontSize: 11, textAlign: 'center', marginTop: 10, paddingHorizontal: 30, fontStyle: 'italic' },
+  carteAchatRequis: { alignItems: 'center', marginTop: 10, paddingHorizontal: 30 },
+  boutonAcheterRapide: { backgroundColor: COLORS.musique, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 8, marginTop: 10 },
+  boutonAcheterRapideTexte: { color: '#fff', fontWeight: '700', fontSize: 13 },
   raccourcisLigne: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 26, paddingHorizontal: 10 },
   raccourci: { alignItems: 'center', gap: 6 },
   raccourciIconeFond: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },

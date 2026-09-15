@@ -28,16 +28,17 @@ public class MusiqueController {
 
     @GetMapping("/titres")
     public ResponseEntity<Page<Titre>> listerTitres(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
             @RequestParam(required = false) String genre,
             @RequestParam(required = false) Boolean gratuit,
             @RequestParam(required = false) String artiste,
             Pageable pageable) {
-        return ResponseEntity.ok(musiqueService.listerTitres(genre, gratuit, artiste, pageable));
+        return ResponseEntity.ok(musiqueService.listerTitres(genre, gratuit, artiste, pageable, userId != null ? Long.valueOf(userId) : null));
     }
 
     @GetMapping("/titres/{id}")
-    public ResponseEntity<Titre> obtenirTitre(@PathVariable Long id) {
-        return ResponseEntity.ok(musiqueService.obtenirTitre(id));
+    public ResponseEntity<Titre> obtenirTitre(@RequestHeader(value = "X-User-Id", required = false) String userId, @PathVariable Long id) {
+        return ResponseEntity.ok(musiqueService.obtenirTitre(id, userId != null ? Long.valueOf(userId) : null));
     }
 
     @PostMapping("/titres/{id}/ecouter")
@@ -109,8 +110,10 @@ public class MusiqueController {
     }
 
     @GetMapping("/classements")
-    public ResponseEntity<Page<Titre>> classement(@RequestParam(defaultValue = "streaming") String type, Pageable pageable) {
-        return ResponseEntity.ok(musiqueService.classement(type, pageable));
+    public ResponseEntity<Page<Titre>> classement(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestParam(defaultValue = "streaming") String type, Pageable pageable) {
+        return ResponseEntity.ok(musiqueService.classement(type, pageable, userId != null ? Long.valueOf(userId) : null));
     }
 
     @PostMapping("/achats/initier")
