@@ -25,7 +25,13 @@ export default function CandidatDetailScreen({ navigation, route }) {
   const [erreur, setErreur] = useState(null);
   const [voteEnCours, setVoteEnCours] = useState(false);
   const [confettis, setConfettis] = useState([]);
+  const [solde, setSolde] = useState(null);
   const confettiIdRef = useRef(0);
+
+  useEffect(() => {
+    if (!estConnecte) { setSolde(null); return; }
+    client.get('/api/votes/portefeuille').then(({ data }) => setSolde(data.solde)).catch(() => {});
+  }, [estConnecte]);
 
   const charger = async () => {
     const { data } = await client.get(`/api/votes/candidats/${id}`);
@@ -53,6 +59,7 @@ export default function CandidatDetailScreen({ navigation, route }) {
         setConfettis((precedent) => [...precedent, { confettiId, x: pageX, y: pageY }]);
       }
       await charger();
+      client.get('/api/votes/portefeuille').then(({ data }) => setSolde(data.solde)).catch(() => {});
     } catch (e) {
       setErreur(e.message);
     } finally {
@@ -104,6 +111,12 @@ export default function CandidatDetailScreen({ navigation, route }) {
         </View>
 
         <MessageErreur message={erreur} />
+
+        {estConnecte && solde !== null && (
+          <Pressable style={styles.badgeSolde} onPress={() => navigation.navigate('Portefeuille')}>
+            <Text style={styles.badgeSoldeTexte}>🪙 Solde : {solde} piece{solde > 1 ? 's' : ''}</Text>
+          </Pressable>
+        )}
 
         {candidat.statut !== 'ELIMINE' && (
           <PrimaryButton
@@ -158,4 +171,6 @@ const styles = StyleSheet.create({
   video: { width: '100%', aspectRatio: 16 / 9 },
   pasDeVideoConteneur: { backgroundColor: COLORS.fondCarte, borderRadius: 14, padding: 24, marginTop: 20, alignItems: 'center', gap: 8 },
   pasDeVideo: { color: COLORS.texteAtténué, fontSize: 13, textAlign: 'center' },
+  badgeSolde: { alignSelf: 'flex-start', backgroundColor: 'rgba(255,204,33,0.15)', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 12 },
+  badgeSoldeTexte: { color: COLORS.or, fontSize: 13, fontWeight: '800' },
 });

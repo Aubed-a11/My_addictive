@@ -46,6 +46,7 @@ export default function ChatLiveScreen({ navigation, route }) {
 
   useEffect(() => {
     let actif = true;
+    client.post(`/api/live/evenements/${id}/spectateurs/entrer`).catch(() => {});
     const rafraichir = async () => {
       try {
         const [{ data: msgs }, { data: nb }] = await Promise.all([
@@ -57,7 +58,11 @@ export default function ChatLiveScreen({ navigation, route }) {
     };
     rafraichir();
     const intervalle = setInterval(rafraichir, 4000);
-    return () => { actif = false; clearInterval(intervalle); };
+    return () => {
+      actif = false;
+      clearInterval(intervalle);
+      client.post(`/api/live/evenements/${id}/spectateurs/sortir`).catch(() => {});
+    };
   }, [id]);
 
   // Interrogation rapide et dediee des reactions (independante du rafraichissement

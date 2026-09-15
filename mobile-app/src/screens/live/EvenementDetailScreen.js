@@ -86,6 +86,10 @@ export default function EvenementDetailScreen({ navigation, route }) {
   useEffect(() => {
     if (!evenement || evenement.statut !== 'EN_DIRECT') return;
     let actif = true;
+    // Lecture seule ici : le comptage reel (entrer/sortir) se fait uniquement
+    // dans ChatLiveScreen, pour eviter de compter deux fois le meme
+    // spectateur s'il a la fiche evenement ET le chat ouverts simultanement
+    // (React Navigation garde l'ecran precedent monte en arriere-plan).
     const rafraichir = async () => {
       try {
         const { data: nb } = await client.get(`/api/live/evenements/${id}/spectateurs`);

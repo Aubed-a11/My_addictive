@@ -29,7 +29,13 @@ export default function CandidatsScreen({ navigation, route }) {
   const [classement, setClassement] = useState([]);
   const [erreur, setErreur] = useState(null);
   const [confettis, setConfettis] = useState([]);
+  const [solde, setSolde] = useState(null);
   const confettiIdRef = useRef(0);
+
+  useEffect(() => {
+    if (!estConnecte) { setSolde(null); return; }
+    client.get('/api/votes/portefeuille').then(({ data }) => setSolde(data.solde)).catch(() => {});
+  }, [estConnecte]);
 
   const charger = useCallback(async () => {
     const [{ data: c }, { data: cl }, { data: comp }] = await Promise.all([
@@ -63,6 +69,7 @@ export default function CandidatsScreen({ navigation, route }) {
         setConfettis((precedent) => [...precedent, { confettiId, x: pageX, y: pageY }]);
       }
       charger();
+      client.get('/api/votes/portefeuille').then(({ data }) => setSolde(data.solde)).catch(() => {});
     } catch (e) {
       setErreur(e.message);
     }
@@ -100,7 +107,14 @@ export default function CandidatsScreen({ navigation, route }) {
       <EnteteLogo />
       <Text style={styles.titre}>{nom}</Text>
       <Text style={styles.sousTitre}>Classement pondere : vote du public + note du jury</Text>
-      <Text style={styles.tauxConversion}>1 piece = {TAUX_PIECE_FCFA} FCFA</Text>
+      <View style={styles.ligneSoldeEtTaux}>
+        <Text style={styles.tauxConversion}>1 piece = {TAUX_PIECE_FCFA} FCFA</Text>
+        {estConnecte && solde !== null && (
+          <Pressable style={styles.badgeSolde} onPress={() => navigation.navigate('Portefeuille')}>
+            <Text style={styles.badgeSoldeTexte}>🪙 {solde} piece{solde > 1 ? 's' : ''}</Text>
+          </Pressable>
+        )}
+      </View>
       {competition?.dateFinPhase && (
         <View style={styles.ligneCompteARebours}>
           <Clock size={13} color={COLORS.or} />
@@ -178,7 +192,10 @@ const styles = StyleSheet.create({
   voile: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,10,15,0.6)' },
   titre: { color: '#fff', fontSize: 22, fontWeight: '800', paddingHorizontal: 16, paddingTop: 10 },
   sousTitre: { color: COLORS.texteAtténué, fontSize: 12, paddingHorizontal: 16, marginTop: 4 },
-  tauxConversion: { color: COLORS.or, fontSize: 12, fontWeight: '600', paddingHorizontal: 16, marginTop: 6 },
+  tauxConversion: { color: COLORS.or, fontSize: 12, fontWeight: '600' },
+  ligneSoldeEtTaux: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginTop: 6 },
+  badgeSolde: { backgroundColor: 'rgba(255,204,33,0.15)', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4 },
+  badgeSoldeTexte: { color: COLORS.or, fontSize: 12, fontWeight: '800' },
   ligneCompteARebours: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 16, marginTop: 6 },
   compteARebours: { color: COLORS.or, fontSize: 12, fontWeight: '700' },
   bandeauConnexion: { backgroundColor: COLORS.fondCarte, borderRadius: 12, padding: 12, marginHorizontal: 16, marginTop: 12, borderWidth: 1, borderColor: COLORS.votes, alignItems: 'center' },
