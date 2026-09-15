@@ -32,8 +32,9 @@ public class MusiqueController {
             @RequestParam(required = false) String genre,
             @RequestParam(required = false) Boolean gratuit,
             @RequestParam(required = false) String artiste,
+            @RequestParam(required = false) Long albumId,
             Pageable pageable) {
-        return ResponseEntity.ok(musiqueService.listerTitres(genre, gratuit, artiste, pageable, userId != null ? Long.valueOf(userId) : null));
+        return ResponseEntity.ok(musiqueService.listerTitres(genre, gratuit, artiste, albumId, pageable, userId != null ? Long.valueOf(userId) : null));
     }
 
     @GetMapping("/titres/{id}")

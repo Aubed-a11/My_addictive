@@ -30,7 +30,7 @@ export default function AlbumsScreen({ navigation }) {
         keyExtractor={(a) => String(a.id)}
         contentContainerStyle={{ padding: 16, paddingBottom: HAUTEUR_BARRE_ONGLETS + 16 }}
         renderItem={({ item }) => (
-          <Pressable style={styles.carte} onPress={() => navigation?.navigate?.('Albums')}>
+          <Pressable style={styles.carte} onPress={() => navigation.navigate('AlbumDetail', { id: item.id })}>
             {item.imageUrl ? (
               <Image source={{ uri: resoudreUrlImage(item.imageUrl) }} style={styles.pochette} />
             ) : (

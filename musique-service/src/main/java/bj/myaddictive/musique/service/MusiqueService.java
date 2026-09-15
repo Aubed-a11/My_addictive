@@ -40,7 +40,7 @@ public class MusiqueService {
     }
 
     public Page<Titre> listerTitres(String genre, Boolean gratuit, String artiste, Pageable pageable) {
-        return listerTitres(genre, gratuit, artiste, pageable, null);
+        return listerTitres(genre, gratuit, artiste, null, pageable, null);
     }
 
     /**
@@ -51,9 +51,10 @@ public class MusiqueService {
      * bien plus grave que sur la fiche individuelle puisqu'elle s'active
      * des l'ouverture normale de l'app, sans action particuliere.
      */
-    public Page<Titre> listerTitres(String genre, Boolean gratuit, String artiste, Pageable pageable, Long utilisateurId) {
+    public Page<Titre> listerTitres(String genre, Boolean gratuit, String artiste, Long albumId, Pageable pageable, Long utilisateurId) {
         Page<Titre> page;
-        if (artiste != null) page = titreRepository.findByArtiste(artiste, pageable);
+        if (albumId != null) page = titreRepository.findByAlbumId(albumId, pageable);
+        else if (artiste != null) page = titreRepository.findByArtiste(artiste, pageable);
         else if (gratuit != null && genre != null) page = titreRepository.findByGratuitAndGenre(gratuit, genre, pageable);
         else if (gratuit != null) page = titreRepository.findByGratuit(gratuit, pageable);
         else page = titreRepository.findAll(pageable);

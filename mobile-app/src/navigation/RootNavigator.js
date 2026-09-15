@@ -20,6 +20,7 @@ import MusiqueHomeScreen from '../screens/musique/MusiqueHomeScreen';
 import TitreDetailScreen from '../screens/musique/TitreDetailScreen';
 import LecteurScreen from '../screens/musique/LecteurScreen';
 import AlbumsScreen from '../screens/musique/AlbumsScreen';
+import AlbumDetailScreen from '../screens/musique/AlbumDetailScreen';
 import ClassementMusiqueScreen from '../screens/musique/ClassementMusiqueScreen';
 import RecommandationsScreen from '../screens/musique/RecommandationsScreen';
 import MesTelechargementsScreen from '../screens/musique/MesTelechargementsScreen';
@@ -90,6 +91,7 @@ export default function RootNavigator() {
         <Stack.Screen name="TitreDetail" component={TitreDetailScreen} options={{ title: 'Titre' }} />
         <Stack.Screen name="Lecteur" component={LecteurScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Albums" component={AlbumsScreen} options={{ title: 'Albums' }} />
+        <Stack.Screen name="AlbumDetail" component={AlbumDetailScreen} options={{ title: 'Album' }} />
         <Stack.Screen name="ClassementMusique" component={ClassementMusiqueScreen} options={{ title: 'Nos Top' }} />
         <Stack.Screen name="Recommandations" component={RecommandationsScreen} options={{ title: 'Pour vous' }} />
         <Stack.Screen name="MesTelechargements" component={MesTelechargementsScreen} options={{ title: 'Hors ligne' }} />
