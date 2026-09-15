@@ -12,6 +12,7 @@ public interface TitreRepository extends JpaRepository<Titre, Long> {
     Page<Titre> findByAlbumId(Long albumId, Pageable pageable);
     Page<Titre> findAllByOrderByCompteurEcoutesDesc(Pageable pageable);
     Page<Titre> findAllByOrderByCompteurTelechargementsDesc(Pageable pageable);
+    Page<Titre> findByGratuitOrderByCompteurTelechargementsDesc(boolean gratuit, Pageable pageable);
     java.util.List<Titre> findTop10ByGenreOrderByCompteurEcoutesDesc(String genre);
     java.util.List<Titre> findByImageUrlIsNull();
 }

@@ -164,15 +164,35 @@ public class MusiqueService {
         return classement(type, pageable, null);
     }
 
-    /** Meme filtre que listerTitres/obtenirTitre : sans lui, le classement exposait fichierAudioUrl pour tous les titres payants, quelle que soit leur possession reelle par l'utilisateur consultant. */
+    /**
+     * Trois "Tops" bien distincts (section "Tous nos Tops") :
+     * - streaming : nombre d'ecoutes, tous titres confondus
+     * - telechargement_gratuit : uniquement les titres gratuits, tries par
+     *   telechargements (n'a de sens que pour du contenu gratuit)
+     * - ventes : construit a partir des vrais achats enregistres (table
+     *   Achat), et non plus du meme compteur que les telechargements
+     *   gratuits comme c'etait le cas avant - un "Top Vente" et un "Top
+     *   Telechargement gratuit" identiques n'avait pas de sens.
+     */
     public Page<Titre> classement(String type, Pageable pageable, Long utilisateurId) {
         Page<Titre> page = switch (type) {
-            case "telechargements", "ventes" -> titreRepository.findAllByOrderByCompteurTelechargementsDesc(pageable);
+            case "telechargement_gratuit" -> titreRepository.findByGratuitOrderByCompteurTelechargementsDesc(true, pageable);
+            case "ventes" -> classementVentes(pageable);
             default -> titreRepository.findAllByOrderByCompteurEcoutesDesc(pageable);
         };
         java.util.Set<Long> titresAchetes = utilisateurId == null ? java.util.Set.of()
                 : achatRepository.findByUtilisateurId(utilisateurId).stream().map(Achat::getTitreId).collect(java.util.stream.Collectors.toSet());
         return page.map(titre -> masquerSiNonAchete(titre, titresAchetes.contains(titre.getId())));
+    }
+
+    /** Construit une Page a partir du resultat groupe (titreId, nombre de ventes), en conservant l'ordre du plus vendu au moins vendu. */
+    private Page<Titre> classementVentes(Pageable pageable) {
+        List<Object[]> lignes = achatRepository.topVentes(pageable);
+        List<Titre> titres = new java.util.ArrayList<>();
+        for (Object[] ligne : lignes) {
+            titreRepository.findById((Long) ligne[0]).ifPresent(titres::add);
+        }
+        return new org.springframework.data.domain.PageImpl<>(titres, pageable, titres.size());
     }
 
     /** Initie l'achat d'un titre payant : delegue au paiement-service, ne debloque rien tant que non confirme. */

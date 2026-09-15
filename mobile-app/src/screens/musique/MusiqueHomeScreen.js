@@ -11,6 +11,7 @@ import EnteteLogo from '../../components/EnteteLogo';
 import IconePlaceholder from '../../components/IconePlaceholder';
 import BarreRecherche from '../../components/BarreRecherche';
 import MusiqueCarousel from '../../components/MusiqueCarousel';
+import TousLesTops from '../../components/TousLesTops';
 
 const ONGLETS = [
   { cle: 'gratuit', label: 'Free Music' },
@@ -106,6 +107,7 @@ export default function MusiqueHomeScreen({ navigation }) {
       </View>
 
       <MusiqueCarousel navigation={navigation} />
+      <TousLesTops navigation={navigation} />
       <View style={styles.onglets}>
         {ONGLETS.map((o) => (
           <Pressable key={o.cle} onPress={() => setOnglet(o.cle)} style={[styles.onglet, onglet === o.cle && { borderColor: COLORS.musique }]}>
