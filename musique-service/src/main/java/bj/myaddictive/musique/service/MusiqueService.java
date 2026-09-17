@@ -55,7 +55,8 @@ public class MusiqueService {
         Page<Titre> page;
         if (albumId != null) page = titreRepository.findByAlbumId(albumId, pageable);
         else if (artiste != null) page = titreRepository.findByArtiste(artiste, pageable);
-        else if (gratuit != null && genre != null) page = titreRepository.findByGratuitAndGenre(gratuit, genre, pageable);
+        else if (gratuit != null && genre != null) page = titreRepository.findByGratuitAndGenreContaining(gratuit, genre, pageable);
+        else if (genre != null) page = titreRepository.findByGenreContaining(genre, pageable);
         else if (gratuit != null) page = titreRepository.findByGratuit(gratuit, pageable);
         else page = titreRepository.findAll(pageable);
 
@@ -285,7 +286,7 @@ public class MusiqueService {
                     .map(t -> masquerSiNonAchete(t, titresAchetes.contains(t.getId()))).toList();
         }
 
-        return titreRepository.findTop10ByGenreOrderByCompteurEcoutesDesc(genrePrefere).stream()
+        return titreRepository.findTop10ByGenreContainingOrderByCompteurEcoutesDesc(genrePrefere).stream()
                 .filter(t -> !titresDejaEcoutes.contains(t.getId()))
                 .map(t -> masquerSiNonAchete(t, titresAchetes.contains(t.getId())))
                 .toList();

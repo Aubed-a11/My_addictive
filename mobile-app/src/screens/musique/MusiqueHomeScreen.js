@@ -128,7 +128,7 @@ export default function MusiqueHomeScreen({ navigation }) {
         <Pressable style={styles.onglet} onPress={() => navigation.navigate('Recommandations')}>
           <Text style={styles.ongletTexte}>Pour vous</Text>
         </Pressable>
-        <Pressable style={styles.onglet} onPress={() => Alert.alert('Bientot disponible', "Le classement par genre musical n'est pas encore disponible : aucune donnee de genre n'existe pour l'instant dans le catalogue.")}>
+        <Pressable style={styles.onglet} onPress={() => navigation.navigate('Genres')}>
           <Text style={styles.ongletTexte}>Nos Genres</Text>
         </Pressable>
         <Pressable style={styles.onglet} onPress={() => Alert.alert('Bientot disponible', "Les bonus sons ne sont pas encore une categorie definie cote serveur.")}>
