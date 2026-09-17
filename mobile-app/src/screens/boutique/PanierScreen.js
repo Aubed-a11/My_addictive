@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, Pressable, Image } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Trash2, Minus, Plus } from 'lucide-react-native';
 import client from '../../api/client';
+import { payerAvecKkiapay } from '../../utils/paiementKkiapay';
 import PrimaryButton from '../../components/PrimaryButton';
 import TextField from '../../components/TextField';
 import MessageErreur from '../../components/MessageErreur';
@@ -13,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
 
 const MOYENS_PAIEMENT = [
+  { cle: 'KKIAPAY', label: 'Mobile Money / Carte (KKiaPay)' },
   { cle: 'MTN_MOMO', label: 'MTN Mobile Money' },
   { cle: 'MOOV_MONEY', label: 'Moov Money' },
   { cle: 'CELTIIS_CASH', label: 'Celtiis Cash' },
@@ -27,7 +29,7 @@ export default function PanierScreen({ navigation }) {
   const [erreur, setErreur] = useState(null);
   const [message, setMessage] = useState(null);
   const [validation, setValidation] = useState(false);
-  const [moyenPaiement, setMoyenPaiement] = useState('MTN_MOMO');
+  const [moyenPaiement, setMoyenPaiement] = useState('KKIAPAY');
   const [telephonePayeur, setTelephonePayeur] = useState('');
 
   const charger = useCallback(async () => {
@@ -66,6 +68,18 @@ export default function PanierScreen({ navigation }) {
         moyenPaiement,
         telephonePayeur: MOBILE_MONEY.includes(moyenPaiement) ? telephonePayeur.trim() : undefined,
       });
+
+      if (moyenPaiement === 'KKIAPAY') {
+        setMessage('Ouverture du paiement KKiaPay...');
+        const finale = await payerAvecKkiapay({ transactionId: transaction.id, montantFcfa: total, motif: 'Commande My Addictive' });
+        setMessage(finale.statut === 'REUSSI'
+          ? 'Commande payee avec succes ! Retrouvez-la dans "Mes commandes".'
+          : "Le paiement n'a pas abouti. Vous pouvez reessayer.");
+        charger();
+        setValidation(false);
+        return;
+      }
+
       if (transaction.statut === 'REUSSI') {
         setMessage('Commande payee avec succes ! Retrouvez-la dans "Mes commandes".');
       } else if (moyenPaiement === 'AGENCE') {

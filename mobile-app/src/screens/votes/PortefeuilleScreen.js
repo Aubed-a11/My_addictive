@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, Modal, Pressable, ImageBackground } f
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Wallet, ArrowUpRight, ArrowDownRight } from 'lucide-react-native';
 import client from '../../api/client';
+import { payerAvecKkiapay } from '../../utils/paiementKkiapay';
 import PrimaryButton from '../../components/PrimaryButton';
 import TextField from '../../components/TextField';
 import MessageErreur from '../../components/MessageErreur';
@@ -18,6 +19,7 @@ const PACKS = [
 ];
 
 const MOYENS_PAIEMENT = [
+  { cle: 'KKIAPAY', label: 'Mobile Money / Carte (KKiaPay)' },
   { cle: 'MTN_MOMO', label: 'MTN Mobile Money' },
   { cle: 'MOOV_MONEY', label: 'Moov Money' },
   { cle: 'CELTIIS_CASH', label: 'Celtiis Cash' },
@@ -33,7 +35,7 @@ export default function PortefeuilleScreen({ navigation }) {
   const [chargement, setChargement] = useState(true);
   const [modalOuvert, setModalOuvert] = useState(false);
   const [packChoisi, setPackChoisi] = useState(null);
-  const [moyenPaiement, setMoyenPaiement] = useState('MTN_MOMO');
+  const [moyenPaiement, setMoyenPaiement] = useState('KKIAPAY');
   const [telephonePayeur, setTelephonePayeur] = useState('');
   const [erreur, setErreur] = useState(null);
   const [message, setMessage] = useState(null);
@@ -69,6 +71,19 @@ export default function PortefeuilleScreen({ navigation }) {
         nombrePieces: packChoisi.pieces, montantFcfa: packChoisi.prix, moyenPaiement,
         telephonePayeur: MOBILE_MONEY.includes(moyenPaiement) ? telephonePayeur.trim() : undefined,
       });
+
+      if (moyenPaiement === 'KKIAPAY') {
+        setMessage('Ouverture du paiement KKiaPay...');
+        const finale = await payerAvecKkiapay({ transactionId: transaction.id, montantFcfa: packChoisi.prix, motif: `${packChoisi.pieces} pieces My Addictive` });
+        setMessage(finale.statut === 'REUSSI' ? `${packChoisi.pieces} pieces creditees.` : "Le paiement n'a pas abouti. Vous pouvez reessayer.");
+        setModalOuvert(false);
+        setPackChoisi(null);
+        setTelephonePayeur('');
+        await rafraichir();
+        setAchatEnCours(false);
+        return;
+      }
+
       if (transaction.statut === 'REUSSI') {
         setMessage(`${packChoisi.pieces} pieces creditees.`);
       } else if (moyenPaiement === 'AGENCE') {

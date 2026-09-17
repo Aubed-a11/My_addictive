@@ -161,6 +161,54 @@ envoyee sur le telephone du client, confirmation automatique) - **aucune
 validation manuelle n'est necessaire**, sauf pour le paiement en agence qui
 en a besoin par nature.
 
+## 3ter. Activer les vrais paiements KKiaPay (mobile money, carte bancaire et autres en une seule integration)
+
+KKiaPay est un agregateur unique qui gere MTN Mobile Money, Moov Money et
+carte bancaire en une seule integration, cote **client** (contrairement a
+MTN Mobile Money integre plus haut, qui lui est gere cote serveur) : c'est
+l'application elle-meme qui ouvre le widget de paiement KKiaPay, le serveur
+ne faisant que verifier la confirmation ensuite via un webhook.
+
+**1. Creer un compte KKiaPay et activer le mode test**
+- Va sur https://app.kkiapay.me et cree ton compte.
+- Le mode Sandbox (test) est actif immediatement, sans validation
+  prealable : tu peux commencer a tester des maintenant.
+- Recupere tes trois cles sur le dashboard, menu **Developpeurs > Cles
+  API** : cle publique, cle privee, cle secrete.
+
+**2. Renseigner la cle publique cote application (mobile-app/.env)**
+```bash
+EXPO_PUBLIC_KKIAPAY_PUBLIC_KEY=ta_cle_publique
+EXPO_PUBLIC_KKIAPAY_SANDBOX=true   # false une fois ton compte valide en production
+```
+La cle publique est concue par KKiaPay pour etre embarquee cote client
+(comme la cle publiable de Stripe) : aucun risque a l'exposer ainsi.
+
+**3. Renseigner la cle secrete cote serveur (.env.production)**
+```bash
+KKIAPAY_SECRET_KEY=ta_cle_secrete
+```
+Cette cle sert uniquement a verifier que les webhooks recus proviennent
+bien de KKiaPay (en-tete `x-kkiapay-secret`) : sans elle configuree, aucun
+paiement KKiaPay ne sera jamais confirme, par securite (mieux vaut un
+paiement bloque EN_ATTENTE qu'un faux succes force par un tiers).
+
+**4. Configurer le webhook sur le dashboard KKiaPay**
+- Dashboard KKiaPay > **Developpeurs > Webhook** > "Ajouter un webhook".
+- URL a renseigner : `https://ton-domaine.com/api/paiement/webhooks/kkiapay`
+- Coche l'evenement de confirmation de transaction.
+- Renseigne un "hash secret" : c'est exactement la valeur a mettre dans
+  `KKIAPAY_SECRET_KEY` ci-dessus (les deux doivent etre identiques).
+
+**5. Tester avec les numeros de test KKiaPay**
+
+KKiaPay fournit des numeros de telephone dedies au mode test, permettant
+de simuler un paiement reussi ou echoue sans argent reel (voir le "Guide
+de Test Sandbox" sur leur documentation pour la liste a jour). Utilise le
+moyen de paiement "Mobile Money / Carte (KKiaPay)" dans l'app et l'un de
+ces numeros pour verifier que tout le circuit fonctionne (ouverture du
+widget, confirmation, credit du titre/billet/commande correspondant).
+
 ## 4. Premier demarrage (sans SSL, pour obtenir le certificat)
 
 Avant d'avoir un certificat, on demarre avec la configuration Nginx "bootstrap"

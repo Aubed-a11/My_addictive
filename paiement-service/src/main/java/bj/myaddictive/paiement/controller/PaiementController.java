@@ -77,6 +77,36 @@ public class PaiementController {
         return ResponseEntity.ok(paiementService.confirmerManuellement(id));
     }
 
+    /**
+     * Associe l'identifiant de transaction KKiaPay a la transaction interne
+     * correspondante, une fois le widget termine avec succes cote client
+     * (voir PaiementService.lierTransactionExterne : ne confirme jamais le
+     * paiement a lui seul, seul le webhook KKiaPay fait foi).
+     */
+    @PostMapping("/transactions/{id}/lier-externe")
+    public ResponseEntity<Transaction> lierExterne(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @PathVariable Long id, @RequestBody Map<String, String> corps) {
+        if (userId == null) throw new ApiException(HttpStatus.UNAUTHORIZED, "Connexion requise.");
+        return ResponseEntity.ok(paiementService.lierTransactionExterne(Long.valueOf(userId), id, corps.get("idTransactionExterne")));
+    }
+
+    /**
+     * Webhook KKiaPay (mobile money, carte bancaire et autres en une seule
+     * integration - voir DEPLOIEMENT.md pour la procedure d'obtention des
+     * cles et de configuration du webhook sur le dashboard KKiaPay). Verifie
+     * l'en-tete x-kkiapay-secret avant tout traitement : sans cette
+     * verification, n'importe qui pourrait forger un faux succes de
+     * paiement en appelant directement cette URL.
+     */
+    @PostMapping("/webhooks/kkiapay")
+    public ResponseEntity<Void> webhookKkiapay(
+            @RequestHeader(value = "x-kkiapay-secret", required = false) String secretRecu,
+            @RequestBody Map<String, Object> corps) {
+        paiementService.traiterWebhookKkiapay(secretRecu, corps);
+        return ResponseEntity.ok().build();
+    }
+
     /** Verification d'un identifiant de transaction depuis Mon compte (section 9.1). */
     @GetMapping("/transactions/{id}")
     public ResponseEntity<Transaction> obtenir(

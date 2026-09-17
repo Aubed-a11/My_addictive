@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator, Image, Pressable } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Download, Check, Trash2 } from 'lucide-react-native';
 import client from '../../api/client';
+import { payerAvecKkiapay } from '../../utils/paiementKkiapay';
 import PrimaryButton from '../../components/PrimaryButton';
 import TextField from '../../components/TextField';
 import MessageErreur from '../../components/MessageErreur';
@@ -15,6 +16,7 @@ import EnteteLogo from '../../components/EnteteLogo';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
 
 const MOYENS_PAIEMENT = [
+  { cle: 'KKIAPAY', label: 'Mobile Money / Carte (KKiaPay)' },
   { cle: 'MTN_MOMO', label: 'MTN Mobile Money' },
   { cle: 'MOOV_MONEY', label: 'Moov Money' },
   { cle: 'CELTIIS_CASH', label: 'Celtiis Cash' },
@@ -42,7 +44,7 @@ export default function TitreDetailScreen({ navigation, route }) {
   const [dejaTelecharge, setDejaTelecharge] = useState(false);
   const [telechargementEnCours, setTelechargementEnCours] = useState(false);
   const [progression, setProgression] = useState(0);
-  const [moyenPaiement, setMoyenPaiement] = useState('MTN_MOMO');
+  const [moyenPaiement, setMoyenPaiement] = useState('KKIAPAY');
   const [telephonePayeur, setTelephonePayeur] = useState('');
 
   useEffect(() => {
@@ -81,6 +83,20 @@ export default function TitreDetailScreen({ navigation, route }) {
         titreId: id, moyenPaiement,
         telephonePayeur: MOBILE_MONEY.includes(moyenPaiement) ? telephonePayeur.trim() : undefined,
       });
+
+      if (moyenPaiement === 'KKIAPAY') {
+        setMessage('Ouverture du paiement KKiaPay...');
+        const finale = await payerAvecKkiapay({ transactionId: transaction.id, montantFcfa: titre.prixFcfa, motif: `Titre ${titre.nom}` });
+        if (finale.statut === 'REUSSI') {
+          setMessage('Paiement confirme : le titre est maintenant disponible dans "Mes achats".');
+          setDejaAchete(true);
+        } else {
+          setMessage("Le paiement n'a pas abouti. Vous pouvez reessayer.");
+        }
+        setAchatEnCours(false);
+        return;
+      }
+
       if (transaction.statut === 'REUSSI') {
         setMessage('Paiement confirme : le titre est maintenant disponible dans "Mes achats".');
         setDejaAchete(true);

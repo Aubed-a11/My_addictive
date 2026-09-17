@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator, Pressable, Image, ImageBackg
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MessageCircle, Heart, Share2, CalendarPlus, Flame } from 'lucide-react-native';
 import client from '../../api/client';
+import { payerAvecKkiapay } from '../../utils/paiementKkiapay';
 import PrimaryButton from '../../components/PrimaryButton';
 import TextField from '../../components/TextField';
 import MessageErreur from '../../components/MessageErreur';
@@ -17,6 +18,7 @@ import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabB
 const LIBELLES_STATUT = { A_VENIR: 'A venir', EN_DIRECT: 'En direct', TERMINE: 'Termine', REPLAY: 'Replay' };
 
 const MOYENS_PAIEMENT = [
+  { cle: 'KKIAPAY', label: 'Mobile Money / Carte (KKiaPay)' },
   { cle: 'MTN_MOMO', label: 'MTN Mobile Money' },
   { cle: 'MOOV_MONEY', label: 'Moov Money' },
   { cle: 'CELTIIS_CASH', label: 'Celtiis Cash' },
@@ -36,7 +38,7 @@ export default function EvenementDetailScreen({ navigation, route }) {
   const [evenement, setEvenement] = useState(null);
   const [spectateurs, setSpectateurs] = useState(0);
   const [categorie, setCategorie] = useState('STANDARD');
-  const [moyenPaiement, setMoyenPaiement] = useState('MTN_MOMO');
+  const [moyenPaiement, setMoyenPaiement] = useState('KKIAPAY');
   const [telephonePayeur, setTelephonePayeur] = useState('');
   const [achatEnCours, setAchatEnCours] = useState(false);
   const [erreur, setErreur] = useState(null);
@@ -119,6 +121,21 @@ export default function EvenementDetailScreen({ navigation, route }) {
         evenementId: id, categorie, moyenPaiement,
         telephonePayeur: MOBILE_MONEY.includes(moyenPaiement) ? telephonePayeur.trim() : undefined,
       });
+
+      if (moyenPaiement === 'KKIAPAY') {
+        setMessage('Ouverture du paiement KKiaPay...');
+        const finale = await payerAvecKkiapay({
+          transactionId: transaction.id,
+          montantFcfa: categorie === 'VIP' ? evenement.prixVipFcfa : evenement.prixStandardFcfa,
+          motif: `Billet ${evenement.titre}`,
+        });
+        setMessage(finale.statut === 'REUSSI'
+          ? 'Paiement confirme : retrouvez votre billet (QR code) dans "Mes billets".'
+          : "Le paiement n'a pas abouti. Vous pouvez reessayer.");
+        setAchatEnCours(false);
+        return;
+      }
+
       // Le paiement en agence ne peut jamais etre confirme automatiquement (voir
       // paiement-service) : le billet n'existe donc pas encore a ce stade, tant
       // qu'un administrateur n'a pas verifie manuellement la reception des especes.

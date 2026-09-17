@@ -37,3 +37,13 @@ mobile-money:
   moov:
     base-url: ${MOOV_MONEY_BASE_URL:}
     api-key: ${MOOV_MONEY_API_KEY:}
+  # KKiaPay (mobile money, carte bancaire et autres, en une seule
+  # integration - voir DEPLOIEMENT.md pour la procedure complete). La cle
+  # secrete sert uniquement a verifier que les webhooks recus proviennent
+  # bien de KKiaPay (en-tete x-kkiapay-secret) : sans elle configuree, les
+  # paiements KKiaPay restent bloques EN_ATTENTE indefiniment par securite
+  # (jamais confirmes sans verification). Cles publique/privee : voir
+  # mobile-app/.env.example (cle publique, safe cote client) et le
+  # dashboard KKiaPay (Developpeurs > Cles API).
+  kkiapay:
+    secret-key: ${KKIAPAY_SECRET_KEY:}

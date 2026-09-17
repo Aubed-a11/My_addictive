@@ -48,13 +48,16 @@ public class PaiementService {
     private final TransactionRepository transactionRepository;
     private final PaiementConfirmeNotifier notifier;
     private final MtnMomoClient mtnMomoClient;
+    private final String kkiapaySecret;
 
     public PaiementService(TransactionRepository transactionRepository,
                             PaiementConfirmeNotifier notifier,
-                            MtnMomoClient mtnMomoClient) {
+                            MtnMomoClient mtnMomoClient,
+                            @org.springframework.beans.factory.annotation.Value("${mobile-money.kkiapay.secret-key:}") String kkiapaySecret) {
         this.transactionRepository = transactionRepository;
         this.notifier = notifier;
         this.mtnMomoClient = mtnMomoClient;
+        this.kkiapaySecret = kkiapaySecret;
     }
 
     @Transactional
@@ -94,6 +97,18 @@ public class PaiementService {
             return transactionRepository.save(transaction);
         }
 
+        // KKiaPay (mobile money, carte bancaire et autres, en une seule
+        // integration) : contrairement a MTN Mobile Money, c'est ici l'application
+        // cliente elle-meme (widget KKiaPay) qui gere directement l'interaction
+        // avec l'utilisateur - le serveur n'a rien a appeler a ce stade. La
+        // transaction reste EN_ATTENTE jusqu'a ce que l'app rapporte l'identifiant
+        // KKiaPay obtenu (voir lierTransactionExterne), confirme ensuite par le
+        // webhook KKiaPay (jamais par le seul retour du widget cote client, pour
+        // eviter toute fraude - voir KkiapayWebhookController).
+        if (requete.moyenPaiement() == MoyenPaiement.KKIAPAY) {
+            return transaction;
+        }
+
         // Simulation (developpement, ou moyen de paiement sans integration reelle
         // branchee pour l'instant) : confirmation immediate pour tester la chaine
         // complete sans dependre d'un compte agregateur reel.
@@ -104,6 +119,27 @@ public class PaiementService {
                 requete.moyenPaiement(), transaction.getId());
         traiterWebhook(transaction.getId(), new WebhookRequest(StatutTransaction.REUSSI, idSimule));
         return transactionRepository.findById(transaction.getId()).orElseThrow();
+    }
+
+    /**
+     * Associe l'identifiant de transaction KKiaPay (obtenu par l'app cliente
+     * une fois le widget termine avec succes cote client) a la transaction
+     * interne correspondante, pour que le webhook KKiaPay - qui ne connait
+     * que cet identifiant externe - puisse la retrouver ensuite. Ne change
+     * jamais le statut a lui seul : seul le webhook (ou une interrogation
+     * serveur) confirme reellement le paiement.
+     */
+    @Transactional
+    public Transaction lierTransactionExterne(Long utilisateurId, Long transactionId, String idTransactionExterne) {
+        Transaction transaction = obtenir(transactionId);
+        if (!transaction.getUtilisateurId().equals(utilisateurId)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Cette transaction ne vous appartient pas.");
+        }
+        if (transaction.getStatut() != StatutTransaction.EN_ATTENTE) {
+            return transaction; // deja traitee, rien a faire (idempotence)
+        }
+        transaction.setIdTransactionExterne(idTransactionExterne);
+        return transactionRepository.save(transaction);
     }
 
     /**
@@ -160,6 +196,38 @@ public class PaiementService {
         Transaction transaction = transactionRepository.findByIdTransactionExterne(referenceExterne)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Transaction introuvable pour cette reference."));
         return traiterWebhook(transaction.getId(), new WebhookRequest(statut, referenceExterne));
+    }
+
+    /**
+     * Traite le webhook KKiaPay (format confirme par leur documentation) :
+     * { "transactionId": "...", "isPaymentSucces": true|false, ... }.
+     * Verifie d'abord que l'en-tete x-kkiapay-secret correspond bien a la
+     * cle secrete configuree, pour empecher quiconque de forger un faux
+     * succes de paiement en appelant directement cette URL sans jamais
+     * etre passe par KKiaPay.
+     */
+    @Transactional
+    public void traiterWebhookKkiapay(String secretRecu, java.util.Map<String, Object> corps) {
+        if (kkiapaySecret.isBlank()) {
+            log.warn("Webhook KKiaPay recu mais aucune cle secrete n'est configuree (mobile-money.kkiapay.secret-key) : ignore par securite.");
+            return;
+        }
+        if (!kkiapaySecret.equals(secretRecu)) {
+            log.warn("Webhook KKiaPay recu avec une signature invalide, ignore.");
+            return;
+        }
+        String transactionIdExterne = String.valueOf(corps.get("transactionId"));
+        boolean succes = Boolean.TRUE.equals(corps.get("isPaymentSucces"));
+        try {
+            traiterWebhookParReferenceExterne(transactionIdExterne, succes ? StatutTransaction.REUSSI : StatutTransaction.ECHEC);
+        } catch (ApiException e) {
+            // Transaction pas encore liee cote serveur (voir lierTransactionExterne)
+            // au moment ou le webhook arrive : peut arriver si KKiaPay notifie tres
+            // vite. Sans file d'attente de retraitement, le cas se rattrape via
+            // l'appel a lierTransactionExterne qui, cote app, revient verifier le
+            // statut juste apres.
+            log.warn("Webhook KKiaPay recu pour une transaction externe {} non trouvee (pas encore liee ?).", transactionIdExterne);
+        }
     }
 
     public Transaction obtenir(Long id) {

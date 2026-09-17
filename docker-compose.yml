@@ -188,6 +188,7 @@ services:
       MTN_MOMO_TARGET_ENVIRONMENT: ${MTN_MOMO_TARGET_ENVIRONMENT:-sandbox}
       MTN_MOMO_CALLBACK_HOST: ${MTN_MOMO_CALLBACK_HOST:-}
       MOOV_MONEY_API_KEY: ${MOOV_MONEY_API_KEY:-}
+      KKIAPAY_SECRET_KEY: ${KKIAPAY_SECRET_KEY:-}
     depends_on:
       config-service:
         condition: service_healthy
