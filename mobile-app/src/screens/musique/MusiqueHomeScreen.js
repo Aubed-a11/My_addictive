@@ -41,12 +41,18 @@ export default function MusiqueHomeScreen({ navigation }) {
 
   useEffect(() => { charger(onglet); }, [onglet, charger]);
 
+  // On ne masque les titres sans fichier reel que sur l'onglet gratuit :
+  // sur l'onglet payant, l'URL du fichier est volontairement absente tant
+  // que le titre n'est pas achete (mesure de securite), donc filtrer sur ce
+  // champ y cacherait a tort tous les titres payants non encore achetes.
+  const titresAvecAudio = onglet === 'gratuit' ? titres.filter((t) => !!t.fichierAudioUrl) : titres;
+
   const titresAffiches = recherche.trim()
-    ? titres.filter((t) =>
+    ? titresAvecAudio.filter((t) =>
         t.nom?.toLowerCase().includes(recherche.trim().toLowerCase()) ||
         t.artiste?.toLowerCase().includes(recherche.trim().toLowerCase())
       )
-    : titres;
+    : titresAvecAudio;
 
   useEffect(() => {
     if (!estConnecte) return;

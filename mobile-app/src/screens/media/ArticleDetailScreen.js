@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ActivityIndicator, ScrollView, Pressable, Share } from 'react-native';
+import { View, Text, StyleSheet, Image, ActivityIndicator, ScrollView, Pressable, Share, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { WebView } from 'react-native-webview';
+// react-native-webview ne fonctionne que sur natif (iOS/Android) : sur le web (PWA),
+// on utilise un <iframe> HTML classique a la place, sinon le clip ne s'affiche jamais.
+const WebView = Platform.OS === 'web' ? null : require('react-native-webview').WebView;
 import { Share2, Heart, Eye, BookOpen, Video } from 'lucide-react-native';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -73,12 +75,22 @@ export default function ArticleDetailScreen({ navigation, route }) {
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: HAUTEUR_BARRE_ONGLETS + 16 }}>
         {article.videoUrl ? (
           <View style={styles.videoConteneur}>
-            <WebView
-              source={{ uri: article.videoUrl }}
-              style={styles.video}
-              allowsFullscreenVideo
-              javaScriptEnabled
-            />
+            {Platform.OS === 'web' ? (
+              // @ts-ignore -- balise HTML native, valide en React Native Web
+              <iframe
+                src={article.videoUrl}
+                style={{ width: '100%', height: '100%', border: 0 }}
+                allow="autoplay; fullscreen; encrypted-media"
+                allowFullScreen
+              />
+            ) : (
+              <WebView
+                source={{ uri: article.videoUrl }}
+                style={styles.video}
+                allowsFullscreenVideo
+                javaScriptEnabled
+              />
+            )}
           </View>
         ) : (
           article.imageUrl && <Image source={{ uri: resoudreUrlImage(article.imageUrl) }} style={styles.image} />

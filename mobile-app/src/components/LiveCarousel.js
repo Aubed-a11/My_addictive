@@ -60,10 +60,12 @@ export default function LiveCarousel({ navigation }) {
         ref={listeRef}
         data={items}
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
         keyExtractor={(i) => String(i.id)}
         snapToInterval={largeurCarte}
+        snapToAlignment="start"
+        disableIntervalMomentum
+        getItemLayout={(_, i) => ({ length: largeurCarte, offset: largeurCarte * i, index: i })}
         decelerationRate="fast"
         onMomentumScrollEnd={(e) => {
           indexRef.current = Math.round(e.nativeEvent.contentOffset.x / largeurCarte);

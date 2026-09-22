@@ -47,10 +47,12 @@ export default function EvenementsAVenirCarousel({ navigation }) {
         ref={listeRef}
         data={evenements}
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
         keyExtractor={(e) => String(e.id)}
         snapToInterval={largeurCarte}
+        snapToAlignment="start"
+        disableIntervalMomentum
+        getItemLayout={(_, i) => ({ length: largeurCarte, offset: largeurCarte * i, index: i })}
         decelerationRate="fast"
         onMomentumScrollEnd={(e) => {
           indexRef.current = Math.round(e.nativeEvent.contentOffset.x / largeurCarte);

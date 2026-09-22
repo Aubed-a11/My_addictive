@@ -48,11 +48,13 @@ export default function MusiqueCarousel({ navigation }) {
         ref={listeRef}
         data={items}
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
         keyExtractor={(i) => String(i.id)}
         snapToInterval={largeurCarte}
+        snapToAlignment="start"
+        disableIntervalMomentum
         decelerationRate="fast"
+        getItemLayout={(_, i) => ({ length: largeurCarte, offset: largeurCarte * i, index: i })}
         onMomentumScrollEnd={(e) => {
           indexRef.current = Math.round(e.nativeEvent.contentOffset.x / largeurCarte);
           setIndex(indexRef.current);

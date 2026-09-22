@@ -47,10 +47,12 @@ export default function ActualitesCarousel({ navigation }) {
         ref={listeRef}
         data={articles}
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
         keyExtractor={(a) => String(a.id)}
         snapToInterval={largeurCarte}
+        snapToAlignment="start"
+        disableIntervalMomentum
+        getItemLayout={(_, i) => ({ length: largeurCarte, offset: largeurCarte * i, index: i })}
         decelerationRate="fast"
         onMomentumScrollEnd={(e) => {
           indexRef.current = Math.round(e.nativeEvent.contentOffset.x / largeurCarte);
