@@ -27,7 +27,6 @@ public class ProduitController {
         return ResponseEntity.ok(boutiqueService.listerProduits(categorie, vendeurId, pageable));
     }
 
-    /** Drops limites avec compte a rebours (section 8.2). */
     @GetMapping("/drops")
     public ResponseEntity<Page<Produit>> listerDrops(Pageable pageable) {
         return ResponseEntity.ok(boutiqueService.listerDrops(pageable));
