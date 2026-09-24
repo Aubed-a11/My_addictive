@@ -72,6 +72,8 @@ public class LiveService {
     }
 
 
+    /**
+     * Verifie que l'utilisateur peut acceder au live (chat, etc.) d'un evenement :
      * acces libre si l'evenement est gratuit, billet valide (paiement confirme,
      * donc non annule) exige sinon. Appelee avant chaque action reservee aux
      * spectateurs d'un evenement payant, pour eviter qu'un paiement non abouti
