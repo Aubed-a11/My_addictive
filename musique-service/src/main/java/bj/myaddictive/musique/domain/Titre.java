@@ -19,6 +19,13 @@ public class Titre {
     @Column(length = 30)
     private String genre;
 
+    @Column(name = "mis_en_avant")
+    private boolean misEnAvant = false; // mis en avant manuellement dans les tops, en plus du classement automatique
+
+    @Column(name = "rang_mise_en_avant")
+    private Integer rangMiseEnAvant; // ordre parmi les titres mis en avant (plus petit = plus haut) ; null = pas prioritaire entre eux
+
+
     @Column(name = "album_id")
     private Long albumId;
 
@@ -46,6 +53,9 @@ public class Titre {
     @Column(name = "youtube_url")
     private String youtubeUrl; // clip officiel, pour la section "Brand New" (accueil Musique)
 
+    @Column(name = "description", length = 500)
+    private String description; // court descriptif affiche sur la fiche detail, editable depuis le dashboard admin
+
     @Column(name = "date_ajout")
     private java.time.Instant dateAjout = java.time.Instant.now(); // sert a trier les nouveautes par ordre chronologique reel, pas par id (peu fiable sur des donnees importees en masse)
 
@@ -57,6 +67,10 @@ public class Titre {
     public void setArtiste(String artiste) { this.artiste = artiste; }
     public String getGenre() { return genre; }
     public void setGenre(String genre) { this.genre = genre; }
+    public boolean isMisEnAvant() { return misEnAvant; }
+    public void setMisEnAvant(boolean misEnAvant) { this.misEnAvant = misEnAvant; }
+    public Integer getRangMiseEnAvant() { return rangMiseEnAvant; }
+    public void setRangMiseEnAvant(Integer rangMiseEnAvant) { this.rangMiseEnAvant = rangMiseEnAvant; }
     public Long getAlbumId() { return albumId; }
     public void setAlbumId(Long albumId) { this.albumId = albumId; }
     public String getFichierAudioUrl() { return fichierAudioUrl; }
@@ -75,6 +89,8 @@ public class Titre {
     public void setCompteurTelechargements(Long compteurTelechargements) { this.compteurTelechargements = compteurTelechargements; }
     public String getYoutubeUrl() { return youtubeUrl; }
     public void setYoutubeUrl(String youtubeUrl) { this.youtubeUrl = youtubeUrl; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
     public java.time.Instant getDateAjout() { return dateAjout; }
     public void setDateAjout(java.time.Instant dateAjout) { this.dateAjout = dateAjout; }
 }
