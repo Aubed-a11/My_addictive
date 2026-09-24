@@ -55,6 +55,39 @@ public class LiveService {
         return evenementRepository.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Evenement introuvable."));
     }
 
+    /**
+     * Masque le lien de diffusion (et le replay) d'un evenement payant tant
+     * que l'utilisateur n'a pas de billet valide, pour eviter qu'il soit
+     * expose publiquement via la fiche detail de l'evenement (le lien de
+     * diffusion en clair suffirait a regarder le live sans jamais payer).
+     */
+    public Evenement masquerFluxSiNonAutorise(Evenement evenement, Long utilisateurId) {
+        if (!evenement.isPayant()) return evenement;
+        boolean possedeBillet = utilisateurId != null
+                && billetRepository.existsByUtilisateurIdAndEvenementIdAndStatutNot(utilisateurId, evenement.getId(), "ANNULE");
+        if (possedeBillet) return evenement;
+        evenement.setUrlFlux(null);
+        evenement.setUrlReplay(null);
+        return evenement;
+    }
+
+
+     * acces libre si l'evenement est gratuit, billet valide (paiement confirme,
+     * donc non annule) exige sinon. Appelee avant chaque action reservee aux
+     * spectateurs d'un evenement payant, pour eviter qu'un paiement non abouti
+     * ne donne quand meme acces au contenu.
+     */
+    public void verifierAccesLive(Long evenementId, Long utilisateurId) {
+        Evenement evenement = obtenirEvenement(evenementId);
+        if (!evenement.isPayant()) return;
+        boolean possedeBillet = billetRepository.existsByUtilisateurIdAndEvenementIdAndStatutNot(
+                utilisateurId, evenementId, "ANNULE");
+        if (!possedeBillet) {
+            throw new ApiException(HttpStatus.FORBIDDEN,
+                    "Un billet valide (paiement confirme) est necessaire pour acceder a cet evenement.");
+        }
+    }
+
     /** Creation/programmation d'un evenement (back-office). */
     /** Creation/programmation d'un evenement, par le back-office admin ou en auto-service par un organisateur (section 6.1). */
     public Evenement creerEvenement(Long utilisateurCreateurId, Evenement evenement) {

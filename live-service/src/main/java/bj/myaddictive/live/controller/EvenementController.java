@@ -39,8 +39,11 @@ public class EvenementController {
     }
 
     @GetMapping("/evenements/{id}")
-    public ResponseEntity<Evenement> obtenir(@PathVariable Long id) {
-        return ResponseEntity.ok(liveService.obtenirEvenement(id));
+    public ResponseEntity<Evenement> obtenir(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @PathVariable Long id) {
+        Evenement evenement = liveService.obtenirEvenement(id);
+        return ResponseEntity.ok(liveService.masquerFluxSiNonAutorise(evenement, userId == null ? null : Long.valueOf(userId)));
     }
 
     /** Places restantes par categorie, pour afficher l'urgence d'achat ("Plus que X places !"). */
@@ -152,6 +155,7 @@ public class EvenementController {
             @RequestHeader(value = "X-User-Id", required = false) String userId,
             @PathVariable Long id, @RequestBody Map<String, String> corps) {
         if (userId == null) throw new ApiException(HttpStatus.UNAUTHORIZED, "Connexion requise pour ecrire dans le chat.");
+        liveService.verifierAccesLive(id, Long.valueOf(userId));
         String contenu = corps.getOrDefault("contenu", "").trim();
         if (contenu.isEmpty()) throw new ApiException(HttpStatus.BAD_REQUEST, "Le message ne peut pas etre vide.");
         return ResponseEntity.ok(chatLiveService.envoyer(id, "Utilisateur " + userId, contenu));

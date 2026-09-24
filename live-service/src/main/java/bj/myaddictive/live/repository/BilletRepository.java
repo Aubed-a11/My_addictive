@@ -13,4 +13,6 @@ public interface BilletRepository extends JpaRepository<Billet, Long> {
     boolean existsByTransactionId(Long transactionId);
     /** Places deja prises pour une categorie donnee (statut different d'ANNULE : un billet annule libere sa place). */
     long countByEvenementIdAndCategorieAndStatutNot(Long evenementId, CategorieBillet categorie, String statut);
+    /** Verifie qu'un utilisateur possede un billet valide (non annule) pour un evenement donne. */
+    boolean existsByUtilisateurIdAndEvenementIdAndStatutNot(Long utilisateurId, Long evenementId, String statut);
 }
