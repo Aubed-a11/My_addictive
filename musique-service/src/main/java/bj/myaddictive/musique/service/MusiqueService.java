@@ -40,7 +40,7 @@ public class MusiqueService {
     }
 
     public Page<Titre> listerTitres(String genre, Boolean gratuit, String artiste, Pageable pageable) {
-        return listerTitres(genre, gratuit, artiste, null, pageable, null);
+        return listerTitres(genre, gratuit, artiste, null, null, pageable, null);
     }
 
     /**
@@ -51,9 +51,16 @@ public class MusiqueService {
      * bien plus grave que sur la fiche individuelle puisqu'elle s'active
      * des l'ouverture normale de l'app, sans action particuliere.
      */
-    public Page<Titre> listerTitres(String genre, Boolean gratuit, String artiste, Long albumId, Pageable pageable, Long utilisateurId) {
+    public Page<Titre> listerTitres(String genre, Boolean gratuit, String artiste, Long albumId, String recherche, Pageable pageable, Long utilisateurId) {
         Page<Titre> page;
-        if (albumId != null) page = titreRepository.findByAlbumId(albumId, pageable);
+        // La recherche porte sur l'ensemble du catalogue cote base de donnees
+        // (nom ou artiste), plutot que sur la seule page deja chargee cote
+        // application : indispensable des que le catalogue depasse la taille
+        // d'une page (plusieurs milliers de titres ici), sans quoi un titre
+        // recemment ajoute (donc pas forcement sur la premiere page) ne
+        // serait jamais trouve par la recherche.
+        if (recherche != null && !recherche.isBlank()) page = titreRepository.findByNomContainingIgnoreCaseOrArtisteContainingIgnoreCase(recherche, recherche, pageable);
+        else if (albumId != null) page = titreRepository.findByAlbumId(albumId, pageable);
         else if (artiste != null) page = titreRepository.findByArtiste(artiste, pageable);
         else if (gratuit != null && genre != null) page = titreRepository.findByGratuitAndGenreContaining(gratuit, genre, pageable);
         else if (genre != null) page = titreRepository.findByGenreContaining(genre, pageable);
@@ -80,6 +87,9 @@ public class MusiqueService {
         copie.setCompteurEcoutes(titre.getCompteurEcoutes());
         copie.setCompteurTelechargements(titre.getCompteurTelechargements());
         copie.setYoutubeUrl(titre.getYoutubeUrl());
+        copie.setDescription(titre.getDescription());
+        copie.setMisEnAvant(titre.isMisEnAvant());
+        copie.setRangMiseEnAvant(titre.getRangMiseEnAvant());
         copie.setDateAjout(titre.getDateAjout());
         copie.setFichierAudioUrl(null);
         return copie;
@@ -150,6 +160,34 @@ public class MusiqueService {
         titreRepository.deleteById(id);
     }
 
+    /**
+     * Applique un import en masse de genres : chaque ligne attendue sous la
+     * forme {"id": 123, "genre": "afro"} (ou plusieurs genres separes par
+     * "#", ex. "afro#gospel#", comme deja utilise ailleurs dans le catalogue).
+     * Les identifiants introuvables sont ignores plutot que de faire echouer
+     * tout l'import, et sont rapportes dans le resultat pour verification.
+     */
+    public Map<String, Object> importerGenres(List<Map<String, Object>> lignes) {
+        int miseAJour = 0;
+        java.util.List<Object> idsIntrouvables = new java.util.ArrayList<>();
+        for (Map<String, Object> ligne : lignes) {
+            Object idBrut = ligne.get("id");
+            Object genreBrut = ligne.get("genre");
+            if (idBrut == null || genreBrut == null) continue;
+            Long id = Long.valueOf(String.valueOf(idBrut));
+            java.util.Optional<Titre> titreOpt = titreRepository.findById(id);
+            if (titreOpt.isEmpty()) {
+                idsIntrouvables.add(idBrut);
+                continue;
+            }
+            Titre titre = titreOpt.get();
+            titre.setGenre(String.valueOf(genreBrut).trim());
+            titreRepository.save(titre);
+            miseAJour++;
+        }
+        return Map.of("miseAJour", miseAJour, "idsIntrouvables", idsIntrouvables, "total", lignes.size());
+    }
+
     public Album creerAlbum(Album album) {
         return albumRepository.save(album);
     }
@@ -185,9 +223,9 @@ public class MusiqueService {
      */
     public Page<Titre> classement(String type, Pageable pageable, Long utilisateurId) {
         Page<Titre> page = switch (type) {
-            case "telechargement_gratuit" -> titreRepository.findByGratuitOrderByCompteurTelechargementsDesc(true, pageable);
+            case "telechargement_gratuit" -> titreRepository.classementTelechargementAvecMiseEnAvant(pageable);
             case "ventes" -> classementVentes(pageable);
-            default -> titreRepository.findAllByOrderByCompteurEcoutesDesc(pageable);
+            default -> titreRepository.classementStreamingAvecMiseEnAvant(pageable);
         };
         java.util.Set<Long> titresAchetes = utilisateurId == null ? java.util.Set.of()
                 : achatRepository.findByUtilisateurId(utilisateurId).stream().map(Achat::getTitreId).collect(java.util.stream.Collectors.toSet());
@@ -201,7 +239,17 @@ public class MusiqueService {
         for (Object[] ligne : lignes) {
             titreRepository.findById((Long) ligne[0]).ifPresent(titres::add);
         }
-        return new org.springframework.data.domain.PageImpl<>(titres, pageable, titres.size());
+        // Les titres mis en avant manuellement (dashboard) passent devant, meme
+        // s'ils n'ont pas encore de ventes reelles : ce classement se construit
+        // normalement a partir des achats, ce qui exclurait un titre neuf sans
+        // historique alors qu'on veut justement le mettre en avant.
+        List<Titre> misEnAvant = titreRepository.findByMisEnAvantTrue().stream()
+                .filter(t -> titres.stream().noneMatch(existant -> existant.getId().equals(t.getId())))
+                .sorted(java.util.Comparator.comparing(Titre::getRangMiseEnAvant, java.util.Comparator.nullsLast(Integer::compareTo)))
+                .toList();
+        List<Titre> resultat = new java.util.ArrayList<>(misEnAvant);
+        resultat.addAll(titres);
+        return new org.springframework.data.domain.PageImpl<>(resultat, pageable, resultat.size());
     }
 
     /** Initie l'achat d'un titre payant : delegue au paiement-service, ne debloque rien tant que non confirme. */

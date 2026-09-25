@@ -33,8 +33,9 @@ public class MusiqueController {
             @RequestParam(required = false) Boolean gratuit,
             @RequestParam(required = false) String artiste,
             @RequestParam(required = false) Long albumId,
+            @RequestParam(required = false) String recherche,
             Pageable pageable) {
-        return ResponseEntity.ok(musiqueService.listerTitres(genre, gratuit, artiste, albumId, pageable, userId != null ? Long.valueOf(userId) : null));
+        return ResponseEntity.ok(musiqueService.listerTitres(genre, gratuit, artiste, albumId, recherche, pageable, userId != null ? Long.valueOf(userId) : null));
     }
 
     @GetMapping("/titres/{id}")
@@ -91,6 +92,20 @@ public class MusiqueController {
         exigerAdministrateur(role);
         musiqueService.supprimerTitre(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Import en masse des genres (back-office admin) : recoit une liste de
+     * paires {id, genre} et met a jour le champ genre de chaque titre
+     * correspondant. Pense pour un import depuis un tableur/CSV, sans avoir
+     * a modifier chaque titre un par un dans l'interface.
+     */
+    @PostMapping("/titres/importer-genres")
+    public ResponseEntity<Map<String, Object>> importerGenres(
+            @RequestHeader(value = "X-User-Role", required = false) String role,
+            @RequestBody List<Map<String, Object>> lignes) {
+        exigerAdministrateur(role);
+        return ResponseEntity.ok(musiqueService.importerGenres(lignes));
     }
 
     @PostMapping("/albums")

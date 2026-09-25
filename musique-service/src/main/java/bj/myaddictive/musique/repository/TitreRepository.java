@@ -24,6 +24,7 @@ public interface TitreRepository extends JpaRepository<Titre, Long> {
     java.util.List<Titre> findTop10ByGenreContainingOrderByCompteurEcoutesDesc(String genre);
     java.util.List<Titre> findByImageUrlIsNull();
     java.util.List<Titre> findByMisEnAvantTrue();
+    Page<Titre> findByNomContainingIgnoreCaseOrArtisteContainingIgnoreCase(String nom, String artiste, Pageable pageable);
 
     // Variantes des classements donnant priorite aux titres mis en avant
     // manuellement depuis le dashboard (section "Tops"), avant le tri
