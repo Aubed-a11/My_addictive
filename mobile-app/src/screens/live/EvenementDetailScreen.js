@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MessageCircle, Heart, Share2, CalendarPlus, Flame } from 'lucide-react-native';
 import client from '../../api/client';
 import { payerAvecKkiapay } from '../../utils/paiementKkiapay';
+import { partagerContenu } from '../../utils/partage';
 import PrimaryButton from '../../components/PrimaryButton';
 import TextField from '../../components/TextField';
 import MessageErreur from '../../components/MessageErreur';
@@ -159,10 +160,7 @@ export default function EvenementDetailScreen({ navigation, route }) {
 
   const partager = async () => {
     try {
-      await Share.share({
-        message: `${evenement.titre} - ${evenement.lieu}\nDecouvre cet evenement sur My Addictive !`,
-        title: evenement.titre,
-      });
+      await partagerContenu({ titre: evenement.titre, message: `${evenement.titre} - ${evenement.lieu}\nDecouvre cet evenement sur My Addictive !` });
     } catch {}
   };
 

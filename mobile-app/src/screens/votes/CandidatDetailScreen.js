@@ -7,6 +7,7 @@ import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../theme/colors';
 import { resoudreUrlImage } from '../../utils/urlImage';
+import { partagerContenu } from '../../utils/partage';
 import IconePlaceholder from '../../components/IconePlaceholder';
 import EnteteLogo from '../../components/EnteteLogo';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
@@ -73,7 +74,7 @@ export default function CandidatDetailScreen({ navigation, route }) {
 
   const partager = async () => {
     try {
-      await Share.share({ message: `Vote pour ${candidat.nom} sur My Addictive !`, title: candidat.nom });
+      await partagerContenu({ titre: candidat.nom, message: `Vote pour ${candidat.nom} sur My Addictive !` });
     } catch {}
   };
 

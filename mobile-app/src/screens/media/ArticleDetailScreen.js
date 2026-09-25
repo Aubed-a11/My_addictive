@@ -9,6 +9,7 @@ import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../theme/colors';
 import { resoudreUrlImage } from '../../utils/urlImage';
+import { partagerContenu } from '../../utils/partage';
 import EnteteLogo from '../../components/EnteteLogo';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
 
@@ -57,14 +58,10 @@ export default function ArticleDetailScreen({ navigation, route }) {
   // Partage sur les reseaux sociaux (section 4.1).
   const partager = async () => {
     if (!article) return;
-    try {
-      await Share.share({
-        message: `${article.titre}\n\n${article.chapo || ''}\n\nA lire sur My Addictive.`,
-        title: article.titre,
-      });
-    } catch {
-      // L'utilisateur a simplement annule le partage, rien a faire.
-    }
+    await partagerContenu({
+      titre: article.titre,
+      message: `${article.titre}\n\n${article.chapo || ''}\n\nA lire sur My Addictive.`,
+    });
   };
 
   if (chargement) return <ActivityIndicator color={COLORS.media} style={{ marginTop: 40 }} />;

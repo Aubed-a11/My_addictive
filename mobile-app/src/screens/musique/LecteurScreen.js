@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, Pressable, FlatList, ActivityIndicator, ImageBackground, Alert } from 'react-native';
 import * as HorsLigne from '../../services/telechargementsHorsLigne';
+import { partagerContenu } from '../../utils/partage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -118,8 +119,14 @@ export default function LecteurScreen({ navigation, route }) {
         } catch (erreurMode) {
           console.warn('[Lecteur] setAudioModeAsync ignore (probablement web) :', erreurMode?.message);
         }
+        // Si ce titre a deja ete telecharge pour une ecoute hors ligne, on
+        // lit directement la copie locale (fichier mobile ou blob web via
+        // IndexedDB) plutot que de re-diffuser depuis le serveur : plus
+        // rapide, fonctionne aussi sans connexion, et c'est precisement le
+        // but d'avoir telecharge le titre.
+        const urlLectureLocale = await HorsLigne.obtenirUrlLecture(titre.id);
         const { sound } = await Audio.Sound.createAsync(
-          { uri: resoudreUrlFichier(titre.fichierAudioUrl) },
+          { uri: urlLectureLocale || resoudreUrlFichier(titre.fichierAudioUrl) },
           { shouldPlay: true },
           (statut) => {
             if (annule) return;
@@ -355,7 +362,9 @@ export default function LecteurScreen({ navigation, route }) {
             <Text style={styles.titreTexte} numberOfLines={1}>{titre.nom}</Text>
             <Text style={styles.artisteTexte}>{titre.artiste}</Text>
           </View>
-          <Share2 color="rgba(255,255,255,0.7)" size={19} style={{ marginRight: 16 }} />
+          <Pressable onPress={() => partagerContenu({ titre: titre.nom, message: `Ecoute "${titre.nom}" de ${titre.artiste} sur My Addictive !` })} hitSlop={10}>
+            <Share2 color="rgba(255,255,255,0.7)" size={19} style={{ marginRight: 16 }} />
+          </Pressable>
           <MoreVertical color="rgba(255,255,255,0.7)" size={19} />
         </View>
 

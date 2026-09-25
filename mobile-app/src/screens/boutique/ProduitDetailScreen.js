@@ -10,6 +10,7 @@ import ConfettiVote from '../../components/ConfettiVote';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../theme/colors';
 import { resoudreUrlImage } from '../../utils/urlImage';
+import { partagerContenu } from '../../utils/partage';
 import IconePlaceholder from '../../components/IconePlaceholder';
 import EnteteLogo from '../../components/EnteteLogo';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
@@ -95,10 +96,7 @@ export default function ProduitDetailScreen({ navigation, route }) {
 
   const partager = async () => {
     try {
-      await Share.share({
-        message: `${produit.nom} - ${produit.prixFcfa} FCFA sur My Addictive !`,
-        title: produit.nom,
-      });
+      await partagerContenu({ titre: produit.nom, message: `${produit.nom} - ${produit.prixFcfa} FCFA sur My Addictive !` });
     } catch {}
   };
 
