@@ -20,7 +20,11 @@ public class Titre {
     private String genre;
 
     @Column(name = "mis_en_avant")
-    private boolean misEnAvant = false; // mis en avant manuellement dans les tops, en plus du classement automatique
+    private Boolean misEnAvant = false; // mis en avant manuellement dans les tops, en plus du classement automatique
+    // Type Boolean (et non boolean primitif) : les titres deja presents en base au
+    // moment de l'ajout de ce champ ont une valeur NULL en colonne (colonne ajoutee
+    // apres coup, jamais retro-remplie), ce qu'un booleen primitif ne peut pas
+    // recevoir sans provoquer une erreur Hibernate a la lecture.
 
     @Column(name = "rang_mise_en_avant")
     private Integer rangMiseEnAvant; // ordre parmi les titres mis en avant (plus petit = plus haut) ; null = pas prioritaire entre eux
@@ -67,7 +71,7 @@ public class Titre {
     public void setArtiste(String artiste) { this.artiste = artiste; }
     public String getGenre() { return genre; }
     public void setGenre(String genre) { this.genre = genre; }
-    public boolean isMisEnAvant() { return misEnAvant; }
+    public boolean isMisEnAvant() { return misEnAvant != null && misEnAvant; }
     public void setMisEnAvant(boolean misEnAvant) { this.misEnAvant = misEnAvant; }
     public Integer getRangMiseEnAvant() { return rangMiseEnAvant; }
     public void setRangMiseEnAvant(Integer rangMiseEnAvant) { this.rangMiseEnAvant = rangMiseEnAvant; }

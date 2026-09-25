@@ -23,4 +23,20 @@ public interface TitreRepository extends JpaRepository<Titre, Long> {
     Page<Titre> findByYoutubeUrlIsNotNullOrderByDateAjoutDesc(Pageable pageable);
     java.util.List<Titre> findTop10ByGenreContainingOrderByCompteurEcoutesDesc(String genre);
     java.util.List<Titre> findByImageUrlIsNull();
+    java.util.List<Titre> findByMisEnAvantTrue();
+
+    // Variantes des classements donnant priorite aux titres mis en avant
+    // manuellement depuis le dashboard (section "Tops"), avant le tri
+    // automatique habituel. Un titre mis en avant sans rang precis (rang
+    // null) passe apres ceux qui en ont un, mais toujours avant le tri
+    // automatique.
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT t FROM Titre t ORDER BY COALESCE(t.misEnAvant, false) DESC, " +
+        "CASE WHEN t.rangMiseEnAvant IS NULL THEN 1 ELSE 0 END, t.rangMiseEnAvant ASC, t.compteurEcoutes DESC")
+    Page<Titre> classementStreamingAvecMiseEnAvant(Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT t FROM Titre t WHERE t.gratuit = true ORDER BY COALESCE(t.misEnAvant, false) DESC, " +
+        "CASE WHEN t.rangMiseEnAvant IS NULL THEN 1 ELSE 0 END, t.rangMiseEnAvant ASC, t.compteurTelechargements DESC")
+    Page<Titre> classementTelechargementAvecMiseEnAvant(Pageable pageable);
 }
