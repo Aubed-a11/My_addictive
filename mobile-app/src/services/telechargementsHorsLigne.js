@@ -23,8 +23,15 @@ import { resoudreUrlFichier } from '../utils/urlImage';
  * cryptographique complete.
  */
 const CLE_INDEX = 'telechargements_hors_ligne';
-const DOSSIER = FileSystem.documentDirectory + 'musique-hors-ligne/';
 const PREFIXE_WEB = 'indexeddb:';
+// DOSSIER n'est calcule qu'a l'usage (jamais au chargement du module) : sur
+// le web, FileSystem.documentDirectory peut se comporter de facon inattendue
+// (valeur nulle ou levant une erreur selon la version d'expo-file-system),
+// et un calcul fait au chargement du fichier planterait AVANT meme que le
+// test Platform.OS === 'web' plus bas n'ait la moindre chance de s'executer.
+function dossierLocal() {
+  return FileSystem.documentDirectory + 'musique-hors-ligne/';
+}
 
 // --- Stockage IndexedDB (web uniquement) ------------------------------
 const NOM_DB = 'myaddictive-hors-ligne';
@@ -74,9 +81,9 @@ async function supprimerBlobWeb(titreId) {
 }
 
 async function assurerDossier() {
-  const info = await FileSystem.getInfoAsync(DOSSIER);
+  const info = await FileSystem.getInfoAsync(dossierLocal());
   if (!info.exists) {
-    await FileSystem.makeDirectoryAsync(DOSSIER, { intermediates: true });
+    await FileSystem.makeDirectoryAsync(dossierLocal(), { intermediates: true });
   }
 }
 
@@ -109,6 +116,7 @@ export async function obtenirUrlLecture(titreId) {
 }
 
 export async function telecharger(titre, onProgression) {
+  console.log('[HorsLigne] telecharger() demarre, Platform.OS =', Platform.OS, 'titre =', titre?.id);
   if (!titre.fichierAudioUrl) {
     throw new Error("Le fichier audio original de ce titre n'est pas encore disponible.");
   }
@@ -141,7 +149,7 @@ export async function telecharger(titre, onProgression) {
     cheminLocal = `${PREFIXE_WEB}${titre.id}`;
   } else {
     await assurerDossier();
-    cheminLocal = `${DOSSIER}titre_${titre.id}.mp3`;
+    cheminLocal = `${dossierLocal()}titre_${titre.id}.mp3`;
     const telechargeur = FileSystem.createDownloadResumable(
       resoudreUrlFichier(titre.fichierAudioUrl),
       cheminLocal,
