@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover, maximum-scale=1"
+    />
+    <meta name="theme-color" content="#0A0A0F" />
+    <meta name="description" content="Musique, media, billetterie, votes et boutique - tout l'ecosysteme My Addictive en une seule application." />
+
+    <!--
+      manifest.json fournit les informations utilisees quand l'application est
+      ajoutee a l'ecran d'accueil sur Android/Chrome. Voir https://web.dev/add-manifest/
+    -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Icone de l'onglet du navigateur -->
+    <link rel="icon" href="/favicon.png" />
+    <link rel="shortcut icon" href="/favicon.png" />
+
+    <!--
+      Safari sur iOS ignore manifest.json pour l'ajout a l'ecran d'accueil et
+      necessite ce jeu de balises specifique, en plus du manifeste standard,
+      pour afficher le vrai logo comme icone et lancer l'app en plein ecran
+      (sans barre d'adresse) une fois ajoutee.
+    -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="My Addictive" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <title>My Addictive</title>
+
+    <style>
+      /* Evite un flash de fond blanc au chargement, avant que React ne prenne le relais. */
+      html, body, #root { height: 100%; background-color: #0A0A0F; }
+      body { margin: 0; overflow: hidden; }
+    </style>
+  </head>
+  <body>
+    <noscript>Vous devez activer JavaScript pour utiliser cette application.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

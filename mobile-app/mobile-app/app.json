@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "My Addictive",
+    "slug": "myaddictive-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/images/app_icon.png",
+    "splash": {
+      "image": "./assets/images/app_icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0A0F"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "icon": "./assets/images/app_icon.png"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/app_icon_adaptive.png",
+        "backgroundColor": "#0A0A0F"
+      }
+    },
+    "web": {
+      "favicon": "./public/favicon.png",
+      "name": "My Addictive",
+      "shortName": "MyAddictive",
+      "themeColor": "#0A0A0F",
+      "backgroundColor": "#0A0A0F",
+      "display": "standalone",
+      "bundler": "metro",
+      "output": "single"
+    }
+  }
+}
