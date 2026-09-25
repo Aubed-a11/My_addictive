@@ -3,6 +3,17 @@ import client from '../api/client';
 
 const CLE_PUBLIQUE = process.env.EXPO_PUBLIC_KKIAPAY_PUBLIC_KEY;
 const SANDBOX = process.env.EXPO_PUBLIC_KKIAPAY_SANDBOX !== 'false';
+export { SANDBOX };
+
+/**
+ * Numero de telephone de test officiel KKiaPay (operateur MTN Benin,
+ * scenario "Successful" documente par KKiaPay), utilise comme valeur par
+ * defaut des champs telephone en mode sandbox : un vrai numero personnel
+ * est systematiquement rejete par l'environnement de test KKiaPay, seuls
+ * ces numeros dedies simulent un paiement reussi. Voir
+ * https://docs.kkiapay.me/v1/en-1.0.0/compte/kkiapay-sandbox-guide-de-test
+ */
+export const TELEPHONE_TEST_SANDBOX = SANDBOX ? '61000000' : '';
 
 /**
  * Enchaine tout le cycle KKiaPay pour une transaction deja creee

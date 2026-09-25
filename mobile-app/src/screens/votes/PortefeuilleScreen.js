@@ -10,6 +10,7 @@ import MessageErreur from '../../components/MessageErreur';
 import { COLORS } from '../../theme/colors';
 import { TAUX_PIECE_FCFA } from '../../theme/votes';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
+import { TELEPHONE_TEST_SANDBOX } from '../../utils/paiementKkiapay';
 
 // Tarif de base aligne sur le taux affiche (1 piece = 100 FCFA), avec un petit bonus sur les gros packs.
 const PACKS = [
@@ -36,7 +37,7 @@ export default function PortefeuilleScreen({ navigation }) {
   const [modalOuvert, setModalOuvert] = useState(false);
   const [packChoisi, setPackChoisi] = useState(null);
   const [moyenPaiement, setMoyenPaiement] = useState('KKIAPAY');
-  const [telephonePayeur, setTelephonePayeur] = useState('');
+  const [telephonePayeur, setTelephonePayeur] = useState(TELEPHONE_TEST_SANDBOX);
   const [erreur, setErreur] = useState(null);
   const [message, setMessage] = useState(null);
   const [achatEnCours, setAchatEnCours] = useState(false);

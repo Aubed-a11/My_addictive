@@ -14,6 +14,7 @@ import { resoudreUrlImage } from '../../utils/urlImage';
 import IconePlaceholder from '../../components/IconePlaceholder';
 import EnteteLogo from '../../components/EnteteLogo';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
+import { TELEPHONE_TEST_SANDBOX } from '../../utils/paiementKkiapay';
 
 const MOYENS_PAIEMENT = [
   { cle: 'KKIAPAY', label: 'Mobile Money / Carte (KKiaPay)' },
@@ -45,7 +46,7 @@ export default function TitreDetailScreen({ navigation, route }) {
   const [telechargementEnCours, setTelechargementEnCours] = useState(false);
   const [progression, setProgression] = useState(0);
   const [moyenPaiement, setMoyenPaiement] = useState('KKIAPAY');
-  const [telephonePayeur, setTelephonePayeur] = useState('');
+  const [telephonePayeur, setTelephonePayeur] = useState(TELEPHONE_TEST_SANDBOX);
 
   useEffect(() => {
     (async () => {

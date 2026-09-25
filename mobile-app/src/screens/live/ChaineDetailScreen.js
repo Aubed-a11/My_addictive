@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../theme/colors';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
 import EnteteLogo from '../../components/EnteteLogo';
+import { TELEPHONE_TEST_SANDBOX } from '../../utils/paiementKkiapay';
 
 const MOYENS_PAIEMENT = [
   { cle: 'MTN_MOMO', label: 'MTN Mobile Money' },
@@ -40,7 +41,7 @@ export default function ChaineDetailScreen({ navigation, route }) {
   const [erreur, setErreur] = useState(null);
   const [choixPaiementOuvert, setChoixPaiementOuvert] = useState(false);
   const [moyenPaiement, setMoyenPaiement] = useState('MTN_MOMO');
-  const [telephonePayeur, setTelephonePayeur] = useState('');
+  const [telephonePayeur, setTelephonePayeur] = useState(TELEPHONE_TEST_SANDBOX);
   const [message, setMessage] = useState(null);
 
   const chargerFanClub = async () => {

@@ -12,6 +12,7 @@ import { resoudreUrlImage } from '../../utils/urlImage';
 import IconePlaceholder from '../../components/IconePlaceholder';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
+import { TELEPHONE_TEST_SANDBOX } from '../../utils/paiementKkiapay';
 
 const MOYENS_PAIEMENT = [
   { cle: 'KKIAPAY', label: 'Mobile Money / Carte (KKiaPay)' },
@@ -30,7 +31,7 @@ export default function PanierScreen({ navigation }) {
   const [message, setMessage] = useState(null);
   const [validation, setValidation] = useState(false);
   const [moyenPaiement, setMoyenPaiement] = useState('KKIAPAY');
-  const [telephonePayeur, setTelephonePayeur] = useState('');
+  const [telephonePayeur, setTelephonePayeur] = useState(TELEPHONE_TEST_SANDBOX);
 
   const charger = useCallback(async () => {
     const { data } = await client.get('/api/boutique/panier');

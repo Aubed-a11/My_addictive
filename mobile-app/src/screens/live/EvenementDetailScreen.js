@@ -15,6 +15,7 @@ import { resoudreUrlImage } from '../../utils/urlImage';
 import IconePlaceholder from '../../components/IconePlaceholder';
 import EnteteLogo from '../../components/EnteteLogo';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
+import { TELEPHONE_TEST_SANDBOX } from '../../utils/paiementKkiapay';
 
 const LIBELLES_STATUT = { A_VENIR: 'A venir', EN_DIRECT: 'En direct', TERMINE: 'Termine', REPLAY: 'Replay' };
 
@@ -40,7 +41,7 @@ export default function EvenementDetailScreen({ navigation, route }) {
   const [spectateurs, setSpectateurs] = useState(0);
   const [categorie, setCategorie] = useState('STANDARD');
   const [moyenPaiement, setMoyenPaiement] = useState('KKIAPAY');
-  const [telephonePayeur, setTelephonePayeur] = useState('');
+  const [telephonePayeur, setTelephonePayeur] = useState(TELEPHONE_TEST_SANDBOX);
   const [achatEnCours, setAchatEnCours] = useState(false);
   const [erreur, setErreur] = useState(null);
   const [message, setMessage] = useState(null);
