@@ -20,6 +20,9 @@ public class Evenement {
     @Column(name = "image_url")
     private String imageUrl;
 
+    @Column(length = 1000)
+    private String description; // affichee sur la fiche detail de l'evenement, editable depuis le dashboard admin
+
     @Column(name = "chaine_id")
     private Long chaineId;
 
@@ -67,6 +70,8 @@ public class Evenement {
     public void setLieu(String lieu) { this.lieu = lieu; }
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
     public Long getChaineId() { return chaineId; }
     public void setChaineId(Long chaineId) { this.chaineId = chaineId; }
     public Long getUtilisateurCreateurId() { return utilisateurCreateurId; }

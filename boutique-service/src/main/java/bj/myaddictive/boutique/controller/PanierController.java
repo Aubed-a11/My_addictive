@@ -56,6 +56,12 @@ public class PanierController {
         return ResponseEntity.ok(boutiqueService.modifierQuantitePanier(exiger(userId), id, quantite));
     }
 
+    /** Montant des frais de livraison, a afficher cote app AVANT la validation du panier. */
+    @GetMapping("/frais-livraison")
+    public ResponseEntity<Map<String, Long>> fraisLivraison() {
+        return ResponseEntity.ok(Map.of("fraisLivraisonFcfa", BoutiqueService.FRAIS_LIVRAISON_FCFA));
+    }
+
     @PostMapping("/commandes/initier")
     public ResponseEntity<Map<String, Object>> initierCommande(
             @RequestHeader(value = "X-User-Id", required = false) String userId,

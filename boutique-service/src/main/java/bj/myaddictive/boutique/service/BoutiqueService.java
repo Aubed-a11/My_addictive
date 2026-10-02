@@ -141,13 +141,22 @@ public class BoutiqueService {
         if (produit.isDropLimite() && produit.getDateDebutDrop() != null && produit.getDateDebutDrop().isAfter(java.time.Instant.now())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Ce drop n'est pas encore en vente.");
         }
-        return panierItemRepository.findByUtilisateurIdAndProduitId(utilisateurId, requete.produitId())
+        // Un produit avec des tailles disponibles (vetement) exige que la
+        // taille soit choisie avant l'ajout au panier.
+        if (produit.getTaillesDisponibles() != null && !produit.getTaillesDisponibles().isBlank()) {
+            java.util.List<String> taillesValides = java.util.Arrays.asList(produit.getTaillesDisponibles().split(","));
+            if (requete.taille() == null || requete.taille().isBlank() || !taillesValides.contains(requete.taille())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Merci de choisir une taille parmi : " + produit.getTaillesDisponibles());
+            }
+        }
+        return panierItemRepository.findByUtilisateurIdAndProduitIdAndTaille(utilisateurId, requete.produitId(), requete.taille())
                 .map(item -> { item.setQuantite(item.getQuantite() + requete.quantite()); return panierItemRepository.save(item); })
                 .orElseGet(() -> {
                     PanierItem item = new PanierItem();
                     item.setUtilisateurId(utilisateurId);
                     item.setProduitId(requete.produitId());
                     item.setQuantite(requete.quantite());
+                    item.setTaille(requete.taille());
                     return panierItemRepository.save(item);
                 });
     }
@@ -175,8 +184,20 @@ public class BoutiqueService {
      * n'est confirmee (statut PAYEE, stock decompte) qu'a la reception de
      * l'evenement RabbitMQ de paiement reussi.
      */
+    /**
+     * Frais de livraison forfaitaires, appliques a toute commande quelle
+     * que soit l'adresse (pas de zonage par distance pour le moment).
+     * Expose aussi via l'API pour que l'application mobile puisse afficher
+     * ce montant au client AVANT la validation du panier, plutot que de le
+     * lui reveler seulement apres coup au moment du paiement.
+     */
+    public static final long FRAIS_LIVRAISON_FCFA = 1000L;
+
     @Transactional
     public Map<String, Object> initierCommande(String userId, InitierCommandeRequest requete) {
+        if (requete.adresseLivraison() == null || requete.adresseLivraison().isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Une adresse de livraison est necessaire pour valider la commande.");
+        }
         Long utilisateurId = Long.valueOf(userId);
         List<PanierItem> items = panierItemRepository.findByUtilisateurId(utilisateurId);
         if (items.isEmpty()) throw new ApiException(HttpStatus.BAD_REQUEST, "Le panier est vide.");
@@ -185,6 +206,8 @@ public class BoutiqueService {
         Commande commande = new Commande();
         commande.setUtilisateurId(utilisateurId);
         commande.setMontantTotalFcfa(0L);
+        commande.setAdresseLivraison(requete.adresseLivraison());
+        commande.setFraisLivraisonFcfa(FRAIS_LIVRAISON_FCFA);
         commande = commandeRepository.save(commande);
 
         for (PanierItem item : items) {
@@ -208,13 +231,13 @@ public class BoutiqueService {
             ligneCommandeRepository.save(ligne);
             total += produit.getPrixFcfa() * item.getQuantite();
         }
-        commande.setMontantTotalFcfa(total);
+        commande.setMontantTotalFcfa(total + FRAIS_LIVRAISON_FCFA);
         commandeRepository.save(commande);
         panierItemRepository.deleteByUtilisateurId(utilisateurId);
 
         Map<String, Object> corps = new java.util.HashMap<>(Map.of(
                 "moyenPaiement", requete.moyenPaiement(),
-                "montantFcfa", total,
+                "montantFcfa", total + FRAIS_LIVRAISON_FCFA,
                 "typeObjet", "COMMANDE",
                 "referenceId", String.valueOf(commande.getId())
         ));

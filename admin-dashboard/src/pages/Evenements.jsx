@@ -5,7 +5,7 @@ import client from '../api/client';
 const STATUTS = ['A_VENIR', 'EN_DIRECT', 'REPLAY', 'TERMINE'];
 
 const VIDE = {
-  titre: '', lieu: '', imageUrl: '', dateDebut: '', statut: 'A_VENIR', chaineId: '',
+  titre: '', lieu: '', imageUrl: '', dateDebut: '', statut: 'A_VENIR', chaineId: '', description: '',
   payant: true, prixStandardFcfa: 5000, prixVipFcfa: 15000, capaciteStandard: null, capaciteVip: null, urlFlux: '', urlReplay: '',
 };
 
@@ -159,6 +159,10 @@ export default function Evenements() {
             <div className="champ">
               <label>URL de l'image</label>
               <input value={formulaire.imageUrl || ''} onChange={(e) => setFormulaire({ ...formulaire, imageUrl: e.target.value })} />
+            </div>
+            <div className="champ">
+              <label>Description (affichee sur la fiche de l'evenement)</label>
+              <textarea rows={3} value={formulaire.description || ''} onChange={(e) => setFormulaire({ ...formulaire, description: e.target.value })} placeholder="Ex. : Une soiree exceptionnelle avec..." />
             </div>
             <div className="champ">
               <label>Chaine (optionnel)</label>

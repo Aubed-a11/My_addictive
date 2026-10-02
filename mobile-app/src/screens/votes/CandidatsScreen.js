@@ -14,6 +14,7 @@ import EnteteLogo from '../../components/EnteteLogo';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
 import CompteARebours from '../../components/CompteARebours';
 import ConfettiVote from '../../components/ConfettiVote';
+import { formaterLibelle } from '../../utils/libelles';
 
 /**
  * Vote payant par pieces (section 7.1) : un vote n'est comptabilise
@@ -148,7 +149,7 @@ export default function CandidatsScreen({ navigation, route }) {
                 {item.photoUrl ? <Image source={{ uri: resoudreUrlImage(item.photoUrl) }} style={styles.photo} /> : <IconePlaceholder style={styles.photo} />}
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={styles.carteTitre}>{item.nom}</Text>
-                  <Text style={styles.carteMeta}>{item.ville} · {item.statut}</Text>
+                  <Text style={styles.carteMeta}>{item.ville} · {formaterLibelle(item.statut)}</Text>
                   <View style={styles.ligneScore}>
                     <Text style={styles.votes}>{entree?.nombreVotes ?? 0} votes</Text>
                     <Text style={styles.noteJury}>Jury : {entree?.noteJury ?? 0}/20</Text>

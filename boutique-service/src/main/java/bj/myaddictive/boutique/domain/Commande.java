@@ -18,6 +18,17 @@ public class Commande {
     @Column(name = "montant_total_fcfa", nullable = false)
     private Long montantTotalFcfa;
 
+    @Column(name = "adresse_livraison", length = 500)
+    private String adresseLivraison;
+
+    @Column(name = "frais_livraison_fcfa")
+    private Long fraisLivraisonFcfa = 0L;
+
+    public String getAdresseLivraison() { return adresseLivraison; }
+    public void setAdresseLivraison(String adresseLivraison) { this.adresseLivraison = adresseLivraison; }
+    public Long getFraisLivraisonFcfa() { return fraisLivraisonFcfa; }
+    public void setFraisLivraisonFcfa(Long fraisLivraisonFcfa) { this.fraisLivraisonFcfa = fraisLivraisonFcfa; }
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 15)
     private StatutCommande statut = StatutCommande.EN_ATTENTE;

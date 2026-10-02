@@ -29,6 +29,7 @@ import MesTelechargementsScreen from '../screens/musique/MesTelechargementsScree
 import MesAchatsMusiqueScreen from '../screens/musique/MesAchatsMusiqueScreen';
 
 import EvenementsListeScreen from '../screens/live/EvenementsListeScreen';
+import LivestreamScreen from '../screens/live/LivestreamScreen';
 import EvenementDetailScreen from '../screens/live/EvenementDetailScreen';
 import ChatLiveScreen from '../screens/live/ChatLiveScreen';
 import MesBilletsScreen from '../screens/live/MesBilletsScreen';
@@ -102,6 +103,7 @@ export default function RootNavigator() {
         <Stack.Screen name="MesAchatsMusique" component={MesAchatsMusiqueScreen} options={{ title: 'Mes achats' }} />
 
         <Stack.Screen name="EvenementsListe" component={EvenementsListeScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Livestream" component={LivestreamScreen} options={{ headerShown: false }} />
         <Stack.Screen name="EvenementDetail" component={EvenementDetailScreen} options={{ title: 'Evenement' }} />
         <Stack.Screen name="ChatLive" component={ChatLiveScreen} options={{ headerShown: false }} />
         <Stack.Screen name="MesBillets" component={MesBilletsScreen} options={{ title: 'Mes billets' }} />

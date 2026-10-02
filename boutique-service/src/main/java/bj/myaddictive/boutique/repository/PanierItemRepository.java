@@ -8,6 +8,6 @@ import java.util.Optional;
 
 public interface PanierItemRepository extends JpaRepository<PanierItem, Long> {
     List<PanierItem> findByUtilisateurId(Long utilisateurId);
-    Optional<PanierItem> findByUtilisateurIdAndProduitId(Long utilisateurId, Long produitId);
+    Optional<PanierItem> findByUtilisateurIdAndProduitIdAndTaille(Long utilisateurId, Long produitId, String taille);
     void deleteByUtilisateurId(Long utilisateurId);
 }

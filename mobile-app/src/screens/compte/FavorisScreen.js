@@ -110,7 +110,14 @@ export default function FavorisScreen({ navigation }) {
             </Pressable>
           );
         }}
-        ListEmptyComponent={!chargement && <Text style={styles.vide}>Aucun favori pour le moment.</Text>}
+        ListEmptyComponent={!chargement && (
+          <View style={{ alignItems: 'center', marginTop: 40 }}>
+            <Text style={styles.vide}>Aucun favori pour le moment.</Text>
+            <Pressable onPress={() => navigation.navigate('Hub')} style={styles.boutonVide}>
+              <Text style={styles.boutonVideTexte}>Découvrir du contenu</Text>
+            </Pressable>
+          </View>
+        )}
       />
       <BottomTabBar navigation={navigation} variante="compte" />
       </SafeAreaView>
@@ -123,6 +130,8 @@ const styles = StyleSheet.create({
   voile: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,10,15,0.6)' },
   titre: { color: '#fff', fontSize: 22, fontWeight: '800', paddingHorizontal: 16, paddingTop: 10 },
   vide: { color: COLORS.texteAtténué, textAlign: 'center', marginTop: 40 },
+  boutonVide: { marginTop: 14, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20, borderWidth: 1, borderColor: COLORS.or },
+  boutonVideTexte: { color: COLORS.or, fontWeight: '700', fontSize: 13 },
   carte: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.fondCarte, borderRadius: 12, padding: 10, marginBottom: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 5, elevation: 3,

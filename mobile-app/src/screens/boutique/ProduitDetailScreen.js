@@ -22,6 +22,7 @@ export default function ProduitDetailScreen({ navigation, route }) {
   const [produit, setProduit] = useState(null);
   const [vendeur, setVendeur] = useState(null);
   const [quantite, setQuantite] = useState(1);
+  const [tailleChoisie, setTailleChoisie] = useState(null);
   const [erreur, setErreur] = useState(null);
   const [message, setMessage] = useState(null);
   const [chargement, setChargement] = useState(false);
@@ -68,15 +69,21 @@ export default function ProduitDetailScreen({ navigation, route }) {
 
   const dropPasEncoreDisponible = produit?.dropLimite && produit.dateDebutDrop && new Date(produit.dateDebutDrop) > new Date();
 
+  const taillesDisponibles = produit?.taillesDisponibles ? produit.taillesDisponibles.split(',').filter(Boolean) : [];
+
   const ajouterAuPanier = async (evenement) => {
     if (!estConnecte) {
       navigation.navigate('Connexion', { returnTo: 'ProduitDetail', returnToParams: { id } });
       return;
     }
+    if (taillesDisponibles.length > 0 && !tailleChoisie) {
+      setErreur('Merci de choisir une taille avant d\'ajouter ce produit au panier.');
+      return;
+    }
     setErreur(null);
     setChargement(true);
     try {
-      await client.post('/api/boutique/panier', { produitId: id, quantite });
+      await client.post('/api/boutique/panier', { produitId: id, quantite, taille: tailleChoisie || undefined });
       setMessage('Ajoute au panier.');
       if (evenement?.nativeEvent) {
         const { pageX, pageY } = evenement.nativeEvent;
@@ -164,6 +171,23 @@ export default function ProduitDetailScreen({ navigation, route }) {
             </View>
           </View>
 
+          {taillesDisponibles.length > 0 && (
+            <View style={styles.taillesConteneur}>
+              <Text style={styles.taillesLabel}>Taille</Text>
+              <View style={styles.taillesLigne}>
+                {taillesDisponibles.map((t) => (
+                  <Pressable
+                    key={t}
+                    onPress={() => setTailleChoisie(t)}
+                    style={[styles.pastilleTaille, tailleChoisie === t && { borderColor: COLORS.boutique, backgroundColor: COLORS.boutique }]}
+                  >
+                    <Text style={[styles.pastilleTailleTexte, tailleChoisie === t && { color: '#0A0A0F', fontWeight: '800' }]}>{t}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
+
           <MessageErreur message={erreur} />
           {message && <Text style={styles.message}>{message}</Text>}
 
@@ -206,6 +230,11 @@ const styles = StyleSheet.create({
   libelleQuantite: { color: '#fff', fontWeight: '600', fontSize: 14 },
   selecteurQuantite: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: COLORS.fondCarte, borderRadius: 24, paddingHorizontal: 8, paddingVertical: 6 },
   boutonQuantite: { width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.boutique, alignItems: 'center', justifyContent: 'center' },
+  taillesConteneur: { marginTop: 16 },
+  taillesLabel: { color: '#fff', fontWeight: '700', fontSize: 14, marginBottom: 8 },
+  taillesLigne: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  pastilleTaille: { minWidth: 42, height: 42, borderRadius: 8, borderWidth: 1.5, borderColor: COLORS.bordure, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
+  pastilleTailleTexte: { color: COLORS.texteAtténué, fontWeight: '700', fontSize: 13 },
   valeurQuantite: { color: '#fff', fontWeight: '700', fontSize: 15, minWidth: 20, textAlign: 'center' },
   message: { color: COLORS.boutique, marginBottom: 10 },
 });

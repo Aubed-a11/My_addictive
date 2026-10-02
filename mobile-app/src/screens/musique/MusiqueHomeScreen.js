@@ -13,6 +13,7 @@ import BarreRecherche from '../../components/BarreRecherche';
 import MusiqueCarousel from '../../components/MusiqueCarousel';
 import TousLesTops from '../../components/TousLesTops';
 import BrandNew from '../../components/BrandNew';
+import { formaterGenre } from '../../utils/libelles';
 
 const ONGLETS = [
   { cle: 'gratuit', label: 'Free Music' },
@@ -169,7 +170,7 @@ export default function MusiqueHomeScreen({ navigation }) {
             )}
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={styles.ligneTitre}>{item.nom}</Text>
-              <Text style={styles.ligneMeta}>{item.artiste} · {item.genre || 'Genre non precise'}</Text>
+              <Text style={styles.ligneMeta}>{item.artiste} · {item.genre ? formaterGenre(item.genre) : 'Genre non precise'}</Text>
             </View>
             <Pressable hitSlop={10} onPress={() => basculerFavori(item.id)} style={{ marginRight: 10 }}>
               <Heart

@@ -1,0 +1,74 @@
+LIVRAISON COMPLETE : AUDIT UX (nav unifiee, infos manquantes, tailles,
+adresse/frais de livraison, ecrans vides, nettoyage libelles)
+========================================================================
+
+CONTENU DE CE ZIP
+--------------------
+1. mobile-app/          -> dossier COMPLET, remplace entierement ton dossier actuel
+2. live-service/...      -> 1 fichier backend a copier (voir chemin complet)
+3. boutique-service/...  -> 9 fichiers backend a copier (voir chemins complets)
+4. admin-dashboard/...   -> 2 fichiers a copier (voir chemins complets)
+
+Pour chaque fichier backend/admin ci-dessous, le chemin DANS ce zip
+reproduit exactement son emplacement dans ton projet "myaddictive" :
+copie-le simplement au meme endroit, en ecrasant l'existant.
+
+  live-service/src/main/java/bj/myaddictive/live/domain/Evenement.java
+  boutique-service/src/main/java/bj/myaddictive/boutique/domain/Produit.java
+  boutique-service/src/main/java/bj/myaddictive/boutique/domain/PanierItem.java
+  boutique-service/src/main/java/bj/myaddictive/boutique/domain/Commande.java
+  boutique-service/src/main/java/bj/myaddictive/boutique/dto/AjouterPanierRequest.java
+  boutique-service/src/main/java/bj/myaddictive/boutique/dto/PanierItemResponse.java
+  boutique-service/src/main/java/bj/myaddictive/boutique/dto/InitierCommandeRequest.java
+  boutique-service/src/main/java/bj/myaddictive/boutique/repository/PanierItemRepository.java
+  boutique-service/src/main/java/bj/myaddictive/boutique/service/BoutiqueService.java
+  boutique-service/src/main/java/bj/myaddictive/boutique/controller/PanierController.java
+  admin-dashboard/src/pages/Evenements.jsx
+  admin-dashboard/src/pages/Boutique.jsx
+
+CE QUI EST INCLUS DANS CETTE LIVRAISON
+-----------------------------------------
+- Navigation unifiee (un seul menu, une seule couleur d'accent jaune) partout
+- Billetterie et Livestream separes en deux ecrans distincts
+- Date/heure + description sur chaque evenement
+- Selection de taille obligatoire pour les vetements (panier + admin)
+- Adresse de livraison + frais de livraison (1000 FCFA) affiches et
+  requis avant validation du panier
+- Ecrans vides (portefeuille, billets, favoris) avec bouton d'action
+- Libelles bruts (EN_LICE, HIGH_TECH, afro#...) mis en forme proprement
+- Compteurs a zero masques
+
+COMMANDES DE REDEPLOIEMENT
+-----------------------------
+
+1) FRONTEND (mobile-app) -- aucune action serveur requise, juste GitHub :
+   - Remplace entierement ton dossier mobile-app par celui de ce zip
+   - Dans le dossier racine "myaddictive" :
+       git add -A
+       git commit -m "Audit UX : navigation unifiee, infos manquantes, tailles, livraison"
+       git push
+   - Vercel redeploiera automatiquement.
+
+2) BACKEND (live-service + boutique-service) + ADMIN DASHBOARD :
+   - Copie les 12 fichiers listes ci-dessus aux emplacements indiques
+   - Dans le dossier racine "myaddictive" :
+       git add -A
+       git commit -m "Audit UX : description evenement, tailles, adresse/frais livraison"
+       git push
+   - Connecte-toi au VPS puis :
+       ssh root@76.13.37.17
+       cd /opt/myaddictive
+       git pull
+       mvn -DskipTests clean package -pl live-service -pl boutique-service
+       docker compose --env-file .env.production up -d --build live-service boutique-service admin-dashboard
+
+   (Patiente quelques minutes apres le redemarrage des services, le
+   serveur est lent a redemarrer completement -- voir historique.)
+
+RESTE A TRAITER (prochains points de l'audit, non inclus ici)
+-----------------------------------------------------------------
+- Vrai lecteur video pour les clips/lives
+- Navigation invitee (panier/favoris sans connexion obligatoire)
+- Finitions diverses (hierarchie typographique, allegement des boutons)
+- Raccourcir l'ecran de demarrage / completer l'onboarding
+- Inscription par numero de telephone

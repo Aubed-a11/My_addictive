@@ -146,7 +146,14 @@ export default function PortefeuilleScreen({ navigation }) {
             </View>
           );
         }}
-        ListEmptyComponent={!chargement && <Text style={styles.vide}>Aucun mouvement pour le moment.</Text>}
+        ListEmptyComponent={!chargement && (
+          <View style={{ alignItems: 'center', marginTop: 20 }}>
+            <Text style={styles.vide}>Aucun mouvement pour le moment.</Text>
+            <Pressable onPress={() => setModalOuvert(true)} style={styles.boutonVide}>
+              <Text style={styles.boutonVideTexte}>Acheter des pièces</Text>
+            </Pressable>
+          </View>
+        )}
       />
 
       <Modal visible={modalOuvert} transparent animationType="slide" onRequestClose={() => { setModalOuvert(false); setPackChoisi(null); }}>
@@ -224,6 +231,8 @@ const styles = StyleSheet.create({
   message: { color: COLORS.compte, textAlign: 'center', marginBottom: 10 },
   sousTitre: { color: '#fff', fontWeight: '700', fontSize: 14, paddingHorizontal: 20, marginBottom: 4 },
   vide: { color: COLORS.texteAtténué, textAlign: 'center', marginTop: 30 },
+  boutonVide: { marginTop: 14, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20, borderWidth: 1, borderColor: COLORS.or },
+  boutonVideTexte: { color: COLORS.or, fontWeight: '700', fontSize: 13 },
   ligneMouvement: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.fondCarte, borderRadius: 12, padding: 12, marginBottom: 8 },
   iconeMouvement: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   motif: { color: '#fff', fontSize: 13, fontWeight: '600' },

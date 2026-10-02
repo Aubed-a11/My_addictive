@@ -125,7 +125,7 @@ export default function ArticleDetailScreen({ navigation, route }) {
           </View>
           <View style={[styles.pastilleMeta, { backgroundColor: 'rgba(255,204,33,0.15)' }]}>
             <Eye color={COLORS.or} size={13} />
-            <Text style={[styles.pastilleMetaTexte, { color: COLORS.or, fontWeight: '700' }]}>{article.compteurVues} vues</Text>
+            {article.compteurVues > 0 && <Text style={[styles.pastilleMetaTexte, { color: COLORS.or, fontWeight: '700' }]}>{article.compteurVues} vues</Text>}
           </View>
         </View>
         {article.chapo && <Text style={styles.chapo}>{article.chapo}</Text>}

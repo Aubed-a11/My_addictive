@@ -11,6 +11,7 @@ import EnteteLogo from '../../components/EnteteLogo';
 import IconePlaceholder from '../../components/IconePlaceholder';
 import BarreRecherche from '../../components/BarreRecherche';
 import MediaCarousel from '../../components/MediaCarousel';
+import { formaterLibelle } from '../../utils/libelles';
 
 const ONGLETS = [
   { cle: 'TOUT', label: 'Toutes' },
@@ -137,9 +138,9 @@ export default function MediaHomeScreen({ navigation }) {
               <Text style={styles.carteTitre} numberOfLines={2}>{item.titre}</Text>
               <View style={styles.carteMetaLigne}>
                 <View style={styles.pastilleCategorie}>
-                  <Text style={styles.pastilleCategorieTexte}>{item.categorie}</Text>
+                  <Text style={styles.pastilleCategorieTexte}>{formaterLibelle(item.categorie)}</Text>
                 </View>
-                <Text style={styles.carteVues}>{item.compteurVues} vues</Text>
+                {item.compteurVues > 0 && <Text style={styles.carteVues}>{item.compteurVues} vues</Text>}
               </View>
             </View>
           </Pressable>

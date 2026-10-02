@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import PrimaryButton from '../../components/PrimaryButton';
 import { COLORS } from '../../theme/colors';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
+import { formaterGenre } from '../../utils/libelles';
 
 /** Recommandations construites a partir de l'historique d'ecoute (section 5.2). */
 export default function RecommandationsScreen({ navigation }) {
@@ -56,7 +57,7 @@ export default function RecommandationsScreen({ navigation }) {
           <Pressable style={styles.ligne} onPress={() => navigation.navigate('TitreDetail', { id: item.id })}>
             <View style={{ flex: 1 }}>
               <Text style={styles.ligneTitre}>{item.nom}</Text>
-              <Text style={styles.ligneMeta}>{item.artiste} · {item.genre}</Text>
+              <Text style={styles.ligneMeta}>{item.artiste} · {formaterGenre(item.genre)}</Text>
             </View>
             <Text style={styles.prix}>{item.gratuit ? 'Gratuit' : `${item.prixFcfa} FCFA`}</Text>
           </Pressable>

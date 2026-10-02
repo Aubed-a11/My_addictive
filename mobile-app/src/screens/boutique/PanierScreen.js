@@ -32,6 +32,8 @@ export default function PanierScreen({ navigation }) {
   const [validation, setValidation] = useState(false);
   const [moyenPaiement, setMoyenPaiement] = useState('KKIAPAY');
   const [telephonePayeur, setTelephonePayeur] = useState(TELEPHONE_TEST_SANDBOX);
+  const [adresseLivraison, setAdresseLivraison] = useState('');
+  const [fraisLivraison, setFraisLivraison] = useState(0);
 
   const charger = useCallback(async () => {
     const { data } = await client.get('/api/boutique/panier');
@@ -39,6 +41,14 @@ export default function PanierScreen({ navigation }) {
   }, []);
 
   useEffect(() => { charger(); }, [charger]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await client.get('/api/boutique/frais-livraison');
+        setFraisLivraison(data.fraisLivraisonFcfa || 0);
+      } catch { /* affichage degrade sans frais si l'appel echoue, le serveur reste de toute facon la source de verite au moment du paiement */ }
+    })();
+  }, []);
 
   const retirer = async (id) => {
     await client.delete(`/api/boutique/panier/${id}`);
@@ -58,6 +68,10 @@ export default function PanierScreen({ navigation }) {
   };
 
   const valider = async () => {
+    if (!adresseLivraison.trim()) {
+      setErreur("Merci de renseigner une adresse de livraison avant de valider la commande.");
+      return;
+    }
     if (MOBILE_MONEY.includes(moyenPaiement) && telephonePayeur.trim().length < 8) {
       setErreur('Merci de renseigner un numéro de téléphone Mobile Money valide.');
       return;
@@ -68,11 +82,12 @@ export default function PanierScreen({ navigation }) {
       const { data: transaction } = await client.post('/api/boutique/commandes/initier', {
         moyenPaiement,
         telephonePayeur: MOBILE_MONEY.includes(moyenPaiement) ? telephonePayeur.trim() : undefined,
+        adresseLivraison: adresseLivraison.trim(),
       });
 
       if (moyenPaiement === 'KKIAPAY') {
         setMessage('Ouverture du paiement KKiaPay...');
-        const finale = await payerAvecKkiapay({ transactionId: transaction.id, montantFcfa: total, motif: 'Commande My Addictive' });
+        const finale = await payerAvecKkiapay({ transactionId: transaction.id, montantFcfa: total + fraisLivraison, motif: 'Commande My Addictive' });
         setMessage(finale.statut === 'REUSSI'
           ? 'Commande payee avec succès ! Retrouvez-la dans "Mes commandes".'
           : "Le paiement n'a pas abouti. Vous pouvez reessayer.");
@@ -140,9 +155,25 @@ export default function PanierScreen({ navigation }) {
       />
       {items.length > 0 && (
         <View style={styles.pied}>
+          <Text style={styles.libelleMoyenPaiement}>Adresse de livraison</Text>
+          <TextField
+            placeholder="Ex. : Quartier, rue, ville, point de repère"
+            value={adresseLivraison}
+            onChangeText={setAdresseLivraison}
+            style={{ marginBottom: 10 }}
+          />
+
+          <View style={styles.ligneTotal}>
+            <Text style={styles.libelleSousTotal}>Sous-total</Text>
+            <Text style={styles.valeurSousTotal}>{total} FCFA</Text>
+          </View>
+          <View style={styles.ligneTotal}>
+            <Text style={styles.libelleSousTotal}>Frais de livraison</Text>
+            <Text style={styles.valeurSousTotal}>{fraisLivraison} FCFA</Text>
+          </View>
           <View style={styles.ligneTotal}>
             <Text style={styles.libelleTotal}>Total</Text>
-            <Text style={styles.valeurTotal}>{total} FCFA</Text>
+            <Text style={styles.valeurTotal}>{total + fraisLivraison} FCFA</Text>
           </View>
 
           <Text style={styles.libelleMoyenPaiement}>Moyen de paiement</Text>
@@ -172,7 +203,7 @@ export default function PanierScreen({ navigation }) {
             </Text>
           )}
 
-          <PrimaryButton titre="Passer commande" couleur={COLORS.boutique} onPress={valider} chargement={validation} />
+          <PrimaryButton titre={`Passer commande · ${total + fraisLivraison} FCFA`} couleur={COLORS.boutique} onPress={valider} chargement={validation} />
         </View>
       )}
     <BottomTabBar navigation={navigation} variante="boutique" ongletActif="panier" />
@@ -198,6 +229,8 @@ const styles = StyleSheet.create({
   ligneTotal: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   libelleTotal: { color: COLORS.texteAtténué, fontSize: 14 },
   valeurTotal: { color: '#fff', fontWeight: '800', fontSize: 18 },
+  libelleSousTotal: { color: COLORS.texteAtténué, fontSize: 13 },
+  valeurSousTotal: { color: COLORS.texteAtténué, fontSize: 13 },
   libelleMoyenPaiement: { color: '#fff', fontWeight: '600', fontSize: 13, marginBottom: 8 },
   moyensPaiement: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   moyenPaiement: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: COLORS.bordure, backgroundColor: 'rgba(255,255,255,0.05)' },

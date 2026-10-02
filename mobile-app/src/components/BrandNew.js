@@ -6,6 +6,7 @@ import { COLORS } from '../theme/colors';
 import { resoudreUrlImage } from '../utils/urlImage';
 import { extraireIdYoutube, vignetteYoutube } from '../utils/youtube';
 import IconePlaceholder from './IconePlaceholder';
+import { formaterGenre } from '../utils/libelles';
 
 /**
  * Section "Brand New" (accueil Musique), inspiree de la maquette de
@@ -60,7 +61,7 @@ export default function BrandNew({ navigation }) {
               <Pressable style={styles.piedCarte} onPress={() => navigation.navigate('TitreDetail', { id: titre.id })}>
                 <Text style={styles.nomTitre} numberOfLines={1}>{titre.nom}</Text>
                 <Text style={styles.artisteLien} numberOfLines={1}>{titre.artiste}</Text>
-                {titre.genre && <Text style={styles.genreLien} numberOfLines={1}>{titre.genre}</Text>}
+                {titre.genre && <Text style={styles.genreLien} numberOfLines={1}>{formaterGenre(titre.genre)}</Text>}
               </Pressable>
             </View>
           );

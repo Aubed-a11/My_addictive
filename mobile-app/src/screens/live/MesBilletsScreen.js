@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Image, ImageBackground, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import QRCode from 'react-native-qrcode-svg';
 import { CheckCircle2, Clock, MapPin } from 'lucide-react-native';
@@ -9,6 +9,7 @@ import { resoudreUrlImage } from '../../utils/urlImage';
 import IconePlaceholder from '../../components/IconePlaceholder';
 import EnteteLogo from '../../components/EnteteLogo';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
+import { formaterLibelle } from '../../utils/libelles';
 
 const LIBELLES_STATUT = {
   VALIDE: { texte: 'Pret pour le scan a l\u2019entree', couleur: COLORS.musique },
@@ -68,7 +69,7 @@ export default function MesBilletsScreen({ navigation }) {
               </View>
 
               <View style={styles.pied}>
-                <Text style={styles.categorie}>Categorie {item.categorie}</Text>
+                <Text style={styles.categorie}>Catégorie {formaterLibelle(item.categorie)}</Text>
                 <View style={styles.statutLigne}>
                   {item.statut === 'UTILISE' && <CheckCircle2 size={14} color={statutInfo.couleur} />}
                   <Text style={[styles.statutTexte, { color: statutInfo.couleur }]}>{statutInfo.texte}</Text>
@@ -84,7 +85,14 @@ export default function MesBilletsScreen({ navigation }) {
             </View>
           );
         }}
-        ListEmptyComponent={<Text style={styles.vide}>Vous n'avez pas encore de billet.</Text>}
+        ListEmptyComponent={
+          <View style={{ alignItems: 'center', marginTop: 40 }}>
+            <Text style={styles.vide}>Vous n'avez pas encore de billet.</Text>
+            <Pressable onPress={() => navigation.navigate('EvenementsListe')} style={styles.boutonVide}>
+              <Text style={styles.boutonVideTexte}>Voir les événements</Text>
+            </Pressable>
+          </View>
+        }
       />
     <BottomTabBar navigation={navigation} variante="live" ongletActif="billets" />
       </SafeAreaView>
@@ -97,6 +105,8 @@ const styles = StyleSheet.create({
   voile: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,10,15,0.6)' },
   titre: { color: '#fff', fontSize: 22, fontWeight: '800', paddingHorizontal: 16, paddingTop: 4 },
   vide: { color: COLORS.texteAtténué, textAlign: 'center', marginTop: 40 },
+  boutonVide: { marginTop: 14, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20, borderWidth: 1, borderColor: COLORS.or },
+  boutonVideTexte: { color: COLORS.or, fontWeight: '700', fontSize: 13 },
   carte: { backgroundColor: COLORS.fondCarte, borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: COLORS.bordure },
   entete: { flexDirection: 'row', marginBottom: 16 },
   vignette: { width: 56, height: 56, borderRadius: 10 },

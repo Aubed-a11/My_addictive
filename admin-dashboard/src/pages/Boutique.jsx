@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import client from '../api/client';
 
-const VIDE = { nom: '', description: '', categorie: 'MODE', prixFcfa: 0, stock: 0, imageUrl: '', vendeurId: 1, dropLimite: false, dateDebutDrop: '' };
+const VIDE = { nom: '', description: '', categorie: 'MODE', prixFcfa: 0, stock: 0, imageUrl: '', vendeurId: 1, dropLimite: false, dateDebutDrop: '', taillesDisponibles: '' };
 
 /** Gestion du catalogue boutique par l'administration (publie directement pour n'importe quel vendeur). */
 export default function Boutique() {
@@ -96,6 +96,10 @@ export default function Boutique() {
               <div className="champ"><label>ID vendeur</label><input type="number" value={formulaire.vendeurId || 1} onChange={(e) => setFormulaire({ ...formulaire, vendeurId: Number(e.target.value) })} /></div>
             </div>
             <div className="champ"><label>URL de l'image</label><input value={formulaire.imageUrl || ''} onChange={(e) => setFormulaire({ ...formulaire, imageUrl: e.target.value })} /></div>
+            <div className="champ">
+              <label>Tailles disponibles (vetements uniquement - separees par une virgule, ex. S,M,L,XL - laisser vide sinon)</label>
+              <input value={formulaire.taillesDisponibles || ''} onChange={(e) => setFormulaire({ ...formulaire, taillesDisponibles: e.target.value })} placeholder="S,M,L,XL" />
+            </div>
             <div className="ligne-champs">
               <div className="champ">
                 <label>Drop limite</label>

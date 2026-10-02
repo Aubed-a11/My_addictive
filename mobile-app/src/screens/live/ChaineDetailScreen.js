@@ -10,6 +10,7 @@ import { COLORS } from '../../theme/colors';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
 import EnteteLogo from '../../components/EnteteLogo';
 import { TELEPHONE_TEST_SANDBOX } from '../../utils/paiementKkiapay';
+import { formaterLibelle } from '../../utils/libelles';
 
 const MOYENS_PAIEMENT = [
   { cle: 'MTN_MOMO', label: 'MTN Mobile Money' },
@@ -220,7 +221,7 @@ export default function ChaineDetailScreen({ navigation, route }) {
         renderItem={({ item }) => (
           <Pressable style={styles.carte} onPress={() => navigation.navigate('EvenementDetail', { id: item.id })}>
             <Text style={styles.carteTitre}>{item.titre}</Text>
-            <Text style={styles.carteMeta}>{item.lieu} · {item.statut}</Text>
+            <Text style={styles.carteMeta}>{item.lieu} · {formaterLibelle(item.statut)}</Text>
           </Pressable>
         )}
         ListEmptyComponent={!chargement && <Text style={styles.vide}>Aucun evenement pour cette chaine.</Text>}

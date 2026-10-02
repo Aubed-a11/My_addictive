@@ -13,7 +13,7 @@ const RUBRIQUES = [
   { cle: 'Media', titre: 'Media', sousTitre: 'Actualites, showbiz et vidéos', degrade: DEGRADES.media, Icone: Newspaper, ecran: 'MediaHome' },
   { cle: 'Musique', titre: 'Musique', sousTitre: 'Titres, albums, classements', degrade: DEGRADES.musique, Icone: Music, ecran: 'MusiqueHome' },
   { cle: 'Billetterie', titre: 'Billetterie', sousTitre: 'Billets et places de concerts', degrade: DEGRADES.billetterie, Icone: Ticket, ecran: 'EvenementsListe' },
-  { cle: 'Livestream', titre: 'Livestream', sousTitre: 'Diffusion en direct, replay et chat', degrade: DEGRADES.live, Icone: Radio, ecran: 'EvenementsListe' },
+  { cle: 'Livestream', titre: 'Livestream', sousTitre: 'Diffusion en direct, replay et chat', degrade: DEGRADES.live, Icone: Radio, ecran: 'Livestream' },
   { cle: 'Votes', titre: 'Votes', sousTitre: 'Talent shows, classements', degrade: DEGRADES.votes, Icone: TrendingUp, ecran: 'CompetitionsListe' },
   { cle: 'Boutique', titre: 'Boutique', sousTitre: 'Marketplace multi-vendeurs', degrade: DEGRADES.boutique, Icone: ShoppingBag, ecran: 'BoutiqueHome' },
 ];
@@ -70,7 +70,7 @@ export default function HubScreen({ navigation }) {
               <Pressable
                 key={r.cle}
                 style={({ pressed }) => [styles.tuileConteneur, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
-                onPress={() => navigation.navigate(r.ecran, r.cle === 'Livestream' ? { mode: 'live' } : r.cle === 'Billetterie' ? { mode: 'billetterie' } : undefined)}
+                onPress={() => navigation.navigate(r.ecran)}
               >
                 <LinearGradient colors={r.degrade} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.tuile}>
                   <View style={styles.icone}>

@@ -22,6 +22,9 @@ public class Produit {
     @Column(nullable = false, length = 30)
     private String categorie;
 
+    @Column(name = "tailles_disponibles")
+    private String taillesDisponibles; // ex. "S,M,L,XL" -- vide/null si le produit n'a pas de taille (non vestimentaire)
+
     @Column(name = "prix_fcfa", nullable = false)
     private Long prixFcfa;
 
@@ -46,6 +49,8 @@ public class Produit {
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
     public String getCategorie() { return categorie; }
+    public String getTaillesDisponibles() { return taillesDisponibles; }
+    public void setTaillesDisponibles(String taillesDisponibles) { this.taillesDisponibles = taillesDisponibles; }
     public void setCategorie(String categorie) { this.categorie = categorie; }
     public Long getPrixFcfa() { return prixFcfa; }
     public void setPrixFcfa(Long prixFcfa) { this.prixFcfa = prixFcfa; }

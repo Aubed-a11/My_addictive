@@ -208,9 +208,17 @@ export default function EvenementDetailScreen({ navigation, route }) {
       <View style={{ padding: 20, paddingBottom: 0 }}>
         <Text style={styles.titre}>{evenement.titre}</Text>
         <Text style={styles.lieu}>{evenement.lieu}</Text>
+        {evenement.dateDebut && (
+          <Text style={styles.dateHeure}>
+            {new Date(evenement.dateDebut).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {' à '}
+            {new Date(evenement.dateDebut).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        )}
         <Text style={[styles.statut, { color: evenement.statut === 'EN_DIRECT' ? '#EF4444' : COLORS.texteAtténué }]}>
-          {LIBELLES_STATUT[evenement.statut] || evenement.statut}{evenement.statut === 'EN_DIRECT' ? `  ·  ${spectateurs} spectateurs` : ''}
+          {LIBELLES_STATUT[evenement.statut] || evenement.statut}{evenement.statut === 'EN_DIRECT' && spectateurs > 0 ? `  ·  ${spectateurs} spectateurs` : ''}
         </Text>
+        {evenement.description && <Text style={styles.description}>{evenement.description}</Text>}
 
         {evenement.statut === 'EN_DIRECT' && (
           <View style={styles.lecteur}>
@@ -314,6 +322,8 @@ const styles = StyleSheet.create({
   boutonCoeur: { position: 'absolute', top: 16, right: 16, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
   titre: { color: '#fff', fontSize: 24, fontWeight: '800' },
   lieu: { color: COLORS.texteAtténué, fontSize: 14, marginTop: 4 },
+  dateHeure: { color: COLORS.or, fontSize: 14, fontWeight: '700', marginTop: 6, textTransform: 'capitalize' },
+  description: { color: COLORS.texteAtténué, fontSize: 14, lineHeight: 20, marginTop: 14 },
   statut: { fontSize: 13, fontWeight: '700', marginTop: 10, marginBottom: 16 },
   lecteur: { backgroundColor: COLORS.fondCarte, borderRadius: 14, padding: 20, marginBottom: 16, alignItems: 'center' },
   lecteurTexte: { color: COLORS.texteAtténué, fontSize: 12, textAlign: 'center' },

@@ -1,35 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Image, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { PlayCircle } from 'lucide-react-native';
 import client from '../../api/client';
 import { COLORS } from '../../theme/colors';
 import { resoudreUrlImage } from '../../utils/urlImage';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
 import EnteteLogo from '../../components/EnteteLogo';
 import IconePlaceholder from '../../components/IconePlaceholder';
-import BarreRecherche from '../../components/BarreRecherche';
+import LiveCarousel from '../../components/LiveCarousel';
 
 const FILTRES = [
-  { cle: null, label: 'Tous' },
-  { cle: 'A_VENIR', label: 'A venir' },
-  { cle: 'TERMINE', label: 'Termines' },
+  { cle: null, label: 'Tous les lives' },
+  { cle: 'EN_DIRECT', label: 'En direct' },
+  { cle: 'REPLAY', label: 'Replay' },
 ];
 
-const LIBELLES_STATUT = { A_VENIR: 'A venir', EN_DIRECT: 'En direct', TERMINE: 'Termine', REPLAY: 'Replay' };
-
 /**
- * Rubrique Billetterie (section 6) : reservation de places pour des
- * evenements, a venir ou deja passes (historique). Distincte de l'ecran
- * Livestream (voir LivestreamScreen.js), qui se concentre lui sur le
- * visionnage immediat (en direct / replay) plutot que sur l'achat de
- * billet -- deux intentions differentes qui partageaient auparavant le
- * meme ecran, une confusion relevee par l'audit UX.
+ * Rubrique Livestream : visionnage de contenu en direct ou en replay,
+ * distincte de la Billetterie (EvenementsListeScreen.js) qui se concentre
+ * elle sur l'achat de billets pour des evenements a venir.
  */
-export default function EvenementsListeScreen({ navigation }) {
+export default function LivestreamScreen({ navigation }) {
   const [filtre, setFiltre] = useState(null);
   const [evenements, setEvenements] = useState([]);
-  const [rechercheOuverte, setRechercheOuverte] = useState(false);
-  const [recherche, setRecherche] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -38,8 +32,7 @@ export default function EvenementsListeScreen({ navigation }) {
     })();
   }, [filtre]);
 
-  const evenementsAffiches = evenements
-    .filter((e) => !recherche.trim() || e.titre?.toLowerCase().includes(recherche.trim().toLowerCase()) || e.lieu?.toLowerCase().includes(recherche.trim().toLowerCase()));
+  const evenementsAffiches = evenements.filter((e) => filtre !== null || e.statut !== 'A_VENIR');
 
   return (
     <ImageBackground source={require('../../../assets/images/scene_bienvenue.jpg')} style={styles.safe} resizeMode="cover">
@@ -47,21 +40,11 @@ export default function EvenementsListeScreen({ navigation }) {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <EnteteLogo />
       <View style={styles.enteteLigne}>
-        <Text style={styles.titre}>Billetterie</Text>
-        {!rechercheOuverte && <BarreRecherche ouverte={false} onToggle={() => setRechercheOuverte(true)} />}
+        <Text style={styles.titre}>Livestream</Text>
       </View>
-      {rechercheOuverte && (
-        <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
-          <BarreRecherche
-            ouverte
-            valeur={recherche}
-            onChangeText={setRecherche}
-            placeholder="Rechercher un événement..."
-            couleurAccent={COLORS.or}
-            onToggle={() => setRechercheOuverte(false)}
-          />
-        </View>
-      )}
+
+      <LiveCarousel navigation={navigation} />
+
       <View style={styles.filtres}>
         {FILTRES.map((f) => (
           <Pressable key={f.label} onPress={() => setFiltre(f.cle)} style={[styles.filtre, filtre === f.cle && { borderColor: COLORS.or }]}>
@@ -70,9 +53,11 @@ export default function EvenementsListeScreen({ navigation }) {
         ))}
       </View>
       <View style={styles.liensRapides}>
-        <Pressable onPress={() => navigation.navigate('MesBillets')}><Text style={styles.lien}>Mes billets</Text></Pressable>
-        <Pressable onPress={() => navigation.navigate('CreerEvenement')}><Text style={styles.lien}>Creer un evenement</Text></Pressable>
+        <Pressable onPress={() => navigation.navigate('Chaines')}><Text style={styles.lien}>Chaines</Text></Pressable>
+        <Pressable onPress={() => navigation.navigate('Podcasts')}><Text style={styles.lien}>Podcasts</Text></Pressable>
+        <Pressable onPress={() => navigation.navigate('Favoris')}><Text style={styles.lien}>Favoris</Text></Pressable>
       </View>
+
       <FlatList
         style={{ flex: 1 }}
         data={evenementsAffiches}
@@ -80,36 +65,31 @@ export default function EvenementsListeScreen({ navigation }) {
         contentContainerStyle={{ padding: 16, paddingBottom: HAUTEUR_BARRE_ONGLETS + 16 }}
         renderItem={({ item }) => (
           <Pressable style={styles.carte} onPress={() => navigation.navigate('EvenementDetail', { id: item.id })}>
-            {item.imageUrl ? <Image source={{ uri: resoudreUrlImage(item.imageUrl) }} style={styles.image} /> : <IconePlaceholder style={styles.image} />}
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.carteTitre}>{item.titre}</Text>
-              <Text style={styles.carteMeta}>{item.lieu}</Text>
-              {item.dateDebut && (
-                <Text style={styles.carteMeta}>
-                  {new Date(item.dateDebut).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })} a {new Date(item.dateDebut).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                </Text>
+            <View style={styles.imageConteneur}>
+              {item.imageUrl ? <Image source={{ uri: resoudreUrlImage(item.imageUrl) }} style={styles.image} /> : <IconePlaceholder style={styles.image} />}
+              <View style={styles.voileImage} />
+              <PlayCircle color="#fff" size={30} style={styles.iconePlay} fill="rgba(0,0,0,0.35)" strokeWidth={1.5} />
+              {item.statut === 'EN_DIRECT' && (
+                <View style={styles.badgeDirect}><Text style={styles.badgeDirectTexte}>EN DIRECT</Text></View>
               )}
-              <View style={styles.ligneBas}>
-                <View style={[styles.pastilleStatut, item.statut === 'EN_DIRECT' && styles.pastilleStatutDirect]}>
-                  <Text style={[styles.statutTexte, item.statut === 'EN_DIRECT' && { color: '#fff' }]}>
-                    {LIBELLES_STATUT[item.statut] || item.statut}
-                  </Text>
-                </View>
-                {item.payant && <Text style={styles.prix}>{item.prixStandardFcfa?.toLocaleString('fr-FR')} FCFA</Text>}
-              </View>
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={styles.carteTitre} numberOfLines={2}>{item.titre}</Text>
+              <Text style={styles.carteMeta}>{item.lieu}</Text>
+              <Text style={styles.regarder}>{item.statut === 'EN_DIRECT' ? 'Regarder en direct' : 'Voir le replay'}</Text>
             </View>
           </Pressable>
         )}
         ListEmptyComponent={
           <View style={{ alignItems: 'center', marginTop: 40 }}>
-            <Text style={styles.vide}>{recherche ? 'Aucun résultat pour cette recherche.' : 'Aucun événement pour ce filtre.'}</Text>
-            <Pressable onPress={() => setFiltre(null)} style={styles.boutonVide}>
-              <Text style={styles.boutonVideTexte}>Voir tous les événements</Text>
+            <Text style={styles.vide}>Aucun contenu en direct ou en replay pour le moment.</Text>
+            <Pressable onPress={() => navigation.navigate('EvenementsListe')} style={styles.boutonVide}>
+              <Text style={styles.boutonVideTexte}>Voir les événements à venir</Text>
             </Pressable>
           </View>
         }
       />
-      <BottomTabBar navigation={navigation} />
+      <BottomTabBar navigation={navigation} ongletActif="live" />
       </SafeAreaView>
     </ImageBackground>
   );
@@ -133,12 +113,13 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.bordure,
     shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6, elevation: 4,
   },
-  image: { width: 80, height: 80, borderRadius: 10 },
+  imageConteneur: { width: 90, height: 90, borderRadius: 10, overflow: 'hidden' },
+  image: { width: '100%', height: '100%' },
+  voileImage: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.15)' },
+  iconePlay: { position: 'absolute', top: '50%', left: '50%', marginTop: -15, marginLeft: -15 },
+  badgeDirect: { position: 'absolute', top: 4, left: 4, backgroundColor: '#EF4444', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
+  badgeDirectTexte: { color: '#fff', fontSize: 8, fontWeight: '800' },
   carteTitre: { color: '#fff', fontWeight: '700', fontSize: 14 },
   carteMeta: { color: COLORS.texteAtténué, fontSize: 12, marginTop: 4 },
-  ligneBas: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
-  pastilleStatut: { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  pastilleStatutDirect: { backgroundColor: '#EF4444' },
-  statutTexte: { fontSize: 10, fontWeight: '700', color: COLORS.texteAtténué },
-  prix: { color: COLORS.or, fontWeight: '700', fontSize: 13 },
+  regarder: { color: COLORS.or, fontSize: 12, fontWeight: '700', marginTop: 8 },
 });

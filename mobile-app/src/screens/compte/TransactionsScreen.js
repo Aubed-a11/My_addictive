@@ -7,6 +7,7 @@ import PrimaryButton from '../../components/PrimaryButton';
 import MessageErreur from '../../components/MessageErreur';
 import { COLORS } from '../../theme/colors';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
+import { formaterLibelle } from '../../utils/libelles';
 
 /** Historique des transactions et verification d'un identifiant (section 9.1, socle paiement section 10). */
 export default function TransactionsScreen({ navigation }) {
@@ -74,7 +75,7 @@ export default function TransactionsScreen({ navigation }) {
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={styles.montant}>{item.montantFcfa} FCFA</Text>
               <Text style={[styles.statut, item.statut === 'REUSSI' ? { color: COLORS.musique } : item.statut === 'ECHEC' ? { color: '#F87171' } : { color: COLORS.or }]}>
-                {item.statut}
+                {formaterLibelle(item.statut)}
               </Text>
             </View>
           </View>

@@ -15,6 +15,7 @@ import IconePlaceholder from '../../components/IconePlaceholder';
 import EnteteLogo from '../../components/EnteteLogo';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
 import { TELEPHONE_TEST_SANDBOX } from '../../utils/paiementKkiapay';
+import { formaterGenre } from '../../utils/libelles';
 
 const MOYENS_PAIEMENT = [
   { cle: 'KKIAPAY', label: 'Mobile Money / Carte (KKiaPay)' },
@@ -150,11 +151,16 @@ export default function TitreDetailScreen({ navigation, route }) {
         )}
         <Text style={styles.titre}>{titre.nom}</Text>
         <Text style={styles.artiste}>{titre.artiste}</Text>
-        <Text style={styles.meta}>{titre.compteurEcoutes} ecoutes · {titre.compteurTelechargements} telechargements</Text>
+        <Text style={styles.meta}>
+          {[
+            titre.compteurEcoutes > 0 ? `${titre.compteurEcoutes} écoutes` : null,
+            titre.compteurTelechargements > 0 ? `${titre.compteurTelechargements} téléchargements` : null,
+          ].filter(Boolean).join(' · ') || 'Pas encore d\'écoute enregistrée'}
+        </Text>
         <Text style={styles.description}>
           {titre.description
             ? titre.description
-            : `Titre interprete par ${titre.artiste}${titre.genre ? `, genre ${titre.genre.split('#').filter(Boolean).join('/')}` : ''}.`}
+            : `Titre interprete par ${titre.artiste}${titre.genre ? `, genre ${formaterGenre(titre.genre)}` : ''}.`}
         </Text>
 
         <MessageErreur message={erreur} />
