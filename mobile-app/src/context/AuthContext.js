@@ -47,6 +47,12 @@ export function AuthProvider({ children }) {
     return data;
   }, [enregistrerSession]);
 
+  const connecterAvecGoogle = useCallback(async (idToken) => {
+    const { data } = await client.post('/api/compte/auth/connexion-google', { idToken });
+    await enregistrerSession(data);
+    return data;
+  }, [enregistrerSession]);
+
   const demanderReinitialisation = useCallback(async (email) => {
     await client.post('/api/compte/auth/mot-de-passe-oublie', { email });
   }, []);
@@ -79,7 +85,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       utilisateur, jeton, pret, estConnecte: !!jeton,
-      inscrire, connecter, demanderReinitialisation, reinitialiserMotDePasse,
+      inscrire, connecter, connecterAvecGoogle, demanderReinitialisation, reinitialiserMotDePasse,
       deconnecter, rafraichirProfil,
     }}>
       {children}

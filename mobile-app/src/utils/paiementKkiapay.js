@@ -13,6 +13,11 @@ export { SANDBOX };
  * ces numeros dedies simulent un paiement reussi. Voir
  * https://docs.kkiapay.me/v1/en-1.0.0/compte/kkiapay-sandbox-guide-de-test
  */
+// Le prefixe pays (229, Benin) est necessaire : la documentation KKiaPay
+// illustre toujours ses numeros de test avec l'indicatif complet
+// (ex. "22997000000"), un numero sans indicatif etant rejete par le
+// bac a sable comme un numero invalide plutot que d'etre reconnu comme
+// test.
 export const TELEPHONE_TEST_SANDBOX = SANDBOX ? '61000000' : '';
 
 /**
@@ -28,6 +33,7 @@ export const TELEPHONE_TEST_SANDBOX = SANDBOX ? '61000000' : '';
  */
 export function payerAvecKkiapay({ transactionId, montantFcfa, telephone, email, motif }) {
   return new Promise((resolve, reject) => {
+    let echecTimer = null;
     if (!CLE_PUBLIQUE) {
       reject(new Error("KKiaPay n'est pas configure (cle publique manquante, voir mobile-app/.env)."));
       return;
@@ -37,10 +43,13 @@ export function payerAvecKkiapay({ transactionId, montantFcfa, telephone, email,
       montantFcfa,
       cleApiPublique: CLE_PUBLIQUE,
       sandbox: SANDBOX,
-      telephone,
+      // En sandbox, un vrai numero est toujours refuse : on pre-remplit le numero de test.
+      telephone: telephone || (SANDBOX ? TELEPHONE_TEST_SANDBOX : undefined),
       email,
       motif,
+      partnerId: transactionId,
       onSucces: async (data) => {
+        if (echecTimer) { clearTimeout(echecTimer); echecTimer = null; }
         try {
           await client.post(`/api/paiement/transactions/${transactionId}/lier-externe`, {
             idTransactionExterne: data.transactionId,
@@ -52,7 +61,11 @@ export function payerAvecKkiapay({ transactionId, montantFcfa, telephone, email,
         }
       },
       onEchec: () => {
-        reject(new Error("Paiement KKiaPay annule ou echoue."));
+        // Le widget permet de reessayer apres un echec : on laisse 8 s avant de
+        // declarer l'echec a l'utilisateur. Un succes tardif reste pris en compte
+        // cote serveur (verification + webhook), meme si l'ecran a deja conclu.
+        if (echecTimer) return;
+        echecTimer = setTimeout(() => reject(new Error("Paiement KKiaPay annule ou echoue.")), 8000);
       },
     }).catch(reject);
   });

@@ -39,31 +39,47 @@ function chargerScriptKkiapay() {
   return promesseScriptCharge;
 }
 
+// Les ecouteurs du widget sont globaux et ne se retirent pas de facon fiable :
+// on les enregistre UNE SEULE FOIS et on route chaque evenement vers le paiement
+// en cours. Sans cela, chaque nouveau paiement ajoutait un ecouteur de plus et un
+// ancien paiement abandonne pouvait recevoir l'identifiant d'un paiement ulterieur.
+let ecouteursInstalles = false;
+let courant = null;
+
+function installerEcouteurs() {
+  if (ecouteursInstalles) return;
+  ecouteursInstalles = true;
+  window.addSuccessListener((data) => {
+    const c = courant;
+    courant = null;
+    c?.onSucces(data);
+  });
+  window.addFailedListener?.((data) => {
+    courant?.onEchec(data);
+  });
+}
+
 /**
  * Ouvre le widget de paiement KKiaPay. onSucces recoit { transactionId },
  * onEchec recoit les details de l'echec (peut etre appele aussi si
  * l'utilisateur ferme simplement le widget sans payer, selon KKiaPay).
+ * partnerId (notre identifiant de transaction) est renvoye par KKiaPay dans le
+ * webhook, ce qui permet au serveur de rattacher le paiement meme si la
+ * liaison cote app n'a pas eu lieu.
  */
-export async function ouvrirWidgetKkiapay({ montantFcfa, cleApiPublique, sandbox, telephone, email, motif, onSucces, onEchec }) {
+export async function ouvrirWidgetKkiapay({ montantFcfa, cleApiPublique, sandbox, telephone, email, motif, partnerId, onSucces, onEchec }) {
   await chargerScriptKkiapay();
-
-  const succesListener = (data) => {
-    window.removeAddSuccessListener?.(succesListener);
-    onSucces(data);
-  };
-  const echecListener = (data) => {
-    onEchec(data);
-  };
-
-  window.addSuccessListener(succesListener);
-  window.addFailedListener?.(echecListener);
+  installerEcouteurs();
+  courant = { onSucces, onEchec };
 
   window.openKkiapayWidget({
     amount: montantFcfa,
-    api_key: cleApiPublique,
+    key: cleApiPublique,      // nom documente actuellement
+    api_key: cleApiPublique,  // ancien nom, conserve par compatibilite
     sandbox: !!sandbox,
     phone: telephone || undefined,
     email: email || undefined,
     reason: motif || 'Paiement My Addictive',
+    partnerId: partnerId ? String(partnerId) : undefined,
   });
 }

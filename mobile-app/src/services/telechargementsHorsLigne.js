@@ -126,8 +126,15 @@ export async function telecharger(titre, onProgression) {
   if (Platform.OS === 'web') {
     // Pas de systeme de fichiers prive sur le web : on recupere le fichier
     // et on le stocke comme blob dans IndexedDB plutot que sur disque.
-    const reponse = await fetch(resoudreUrlFichier(titre.fichierAudioUrl));
-    if (!reponse.ok) throw new Error('Impossible de recuperer le fichier audio.');
+    let reponse;
+    try {
+      reponse = await fetch(resoudreUrlFichier(titre.fichierAudioUrl));
+    } catch (e) {
+      console.warn('[HorsLigne] fetch refuse (reseau ou CORS) :', e);
+      throw new Error('Connexion au serveur impossible pendant le telechargement. Verifiez votre connexion et reessayez.');
+    }
+    if (reponse.status === 404) throw new Error("Le fichier audio de ce titre est introuvable sur le serveur.");
+    if (!reponse.ok) throw new Error('Impossible de recuperer le fichier audio (erreur ' + reponse.status + ').');
     const tailleTotale = Number(reponse.headers.get('content-length')) || 0;
     const lecteur = reponse.body?.getReader();
     const morceaux = [];

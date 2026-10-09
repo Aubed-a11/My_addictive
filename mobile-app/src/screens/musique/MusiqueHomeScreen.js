@@ -13,7 +13,7 @@ import BarreRecherche from '../../components/BarreRecherche';
 import MusiqueCarousel from '../../components/MusiqueCarousel';
 import TousLesTops from '../../components/TousLesTops';
 import BrandNew from '../../components/BrandNew';
-import { formaterGenre } from '../../utils/libelles';
+import { formaterGenre, titresLisibles } from '../../utils/libelles';
 
 const ONGLETS = [
   { cle: 'gratuit', label: 'Free Music' },
@@ -42,7 +42,7 @@ export default function MusiqueHomeScreen({ navigation }) {
         ? { recherche: texteRecherche.trim(), page: 0, size: 30 }
         : { gratuit: o === 'gratuit', page: 0, size: 30 };
       const { data } = await client.get('/api/musique/titres', { params });
-      setTitres(data.content || []);
+      setTitres(titresLisibles(data.content));
     } finally {
       setChargement(false);
     }

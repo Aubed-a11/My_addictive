@@ -9,10 +9,11 @@ import BadgeSecurite from '../../components/BadgeSecurite';
 import MessageErreur from '../../components/MessageErreur';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../theme/colors';
+import { demanderConnexionGoogle } from '../../utils/googleAuth';
 
 /** Ecran de connexion (section 3.2) : email + mot de passe, design aligne sur la maquette. */
 export default function LoginScreen({ navigation, route }) {
-  const { connecter } = useAuth();
+  const { connecter, connecterAvecGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
   const [erreur, setErreur] = useState(null);
@@ -32,6 +33,21 @@ export default function LoginScreen({ navigation, route }) {
       setErreur(e.message);
     } finally {
       setChargement(false);
+    }
+  };
+
+  const seConnecterAvecGoogle = async () => {
+    setErreur(null);
+    try {
+      const idToken = await demanderConnexionGoogle();
+      await connecterAvecGoogle(idToken);
+      if (route.params?.returnTo) {
+        navigation.replace(route.params.returnTo, route.params.returnToParams);
+      } else {
+        navigation.goBack();
+      }
+    } catch (e) {
+      setErreur(e.message);
     }
   };
 
@@ -72,7 +88,7 @@ export default function LoginScreen({ navigation, route }) {
       </View>
 
       <View style={styles.reseaux}>
-        <Pressable style={styles.boutonReseau} onPress={() => Alert.alert('Bientôt disponible', "La connexion via Google n'est pas encore activee sur cette version.")}><Chrome color="#fff" size={18} /><Text style={styles.reseauTexte}>Google</Text></Pressable>
+        <Pressable style={styles.boutonReseau} onPress={seConnecterAvecGoogle}><Chrome color="#fff" size={18} /><Text style={styles.reseauTexte}>Google</Text></Pressable>
         <Pressable style={styles.boutonReseau} onPress={() => Alert.alert('Bientôt disponible', "La connexion via Facebook n'est pas encore activee sur cette version.")}><Facebook color="#fff" size={18} /><Text style={styles.reseauTexte}>Facebook</Text></Pressable>
         <Pressable style={styles.boutonReseau} onPress={() => Alert.alert('Bientôt disponible', "La connexion via Apple n'est pas encore activee sur cette version.")}><Apple color="#fff" size={18} /><Text style={styles.reseauTexte}>Apple</Text></Pressable>
       </View>

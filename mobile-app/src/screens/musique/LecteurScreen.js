@@ -71,6 +71,7 @@ export default function LecteurScreen({ navigation, route }) {
   const [erreurPochette, setErreurPochette] = useState(false);
   const [dejaAchete, setDejaAchete] = useState(true); // optimiste par defaut (gratuit ou pas encore su) : jamais bloquant tant que non prouve necessaire
   const [sonPret, setSonPret] = useState(false); // true seulement une fois le fichier reellement charge (pas juste son URL presente)
+  const [chargementEchoue, setChargementEchoue] = useState(false); // true seulement si le chargement a reellement echoue (pas juste en cours)
   const sonRef = React.useRef(null);
   const minuteurRef = React.useRef(null);
   const repeteActifRef = React.useRef(false);
@@ -107,8 +108,9 @@ export default function LecteurScreen({ navigation, route }) {
       setProgression(0);
       setEnLecture(false);
       setSonPret(false);
+      setChargementEchoue(false);
 
-      if (!titre?.fichierAudioUrl) return;
+      if (!titre?.fichierAudioUrl) { setChargementEchoue(true); return; }
 
       try {
         // playsInSilentModeIOS n'a de sens que sur iOS natif : sur le web, cet
@@ -160,6 +162,7 @@ export default function LecteurScreen({ navigation, route }) {
         // pour pouvoir diagnostiquer un probleme reel plutot que de le confondre
         // avec un titre sans fichier reel.
         console.warn('[Lecteur] Impossible de charger le fichier audio :', titre?.fichierAudioUrl, erreur?.message || erreur);
+        setChargementEchoue(true);
       }
     })();
     return () => { annule = true; };
@@ -416,7 +419,7 @@ export default function LecteurScreen({ navigation, route }) {
             </Pressable>
           </View>
         )}
-        {!aUnVraiSon && dejaAchete && (
+        {chargementEchoue && dejaAchete && (
           <Text style={styles.messageApercu}>
             Fichier audio original non disponible pour ce titre : aperçu visuel uniquement.
           </Text>

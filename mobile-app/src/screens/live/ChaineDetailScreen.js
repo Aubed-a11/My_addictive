@@ -9,14 +9,11 @@ import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../theme/colors';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
 import EnteteLogo from '../../components/EnteteLogo';
-import { TELEPHONE_TEST_SANDBOX } from '../../utils/paiementKkiapay';
+import { TELEPHONE_TEST_SANDBOX, payerAvecKkiapay } from '../../utils/paiementKkiapay';
 import { formaterLibelle } from '../../utils/libelles';
 
 const MOYENS_PAIEMENT = [
-  { cle: 'MTN_MOMO', label: 'MTN Mobile Money' },
-  { cle: 'MOOV_MONEY', label: 'Moov Money' },
-  { cle: 'CELTIIS_CASH', label: 'Celtiis Cash' },
-  { cle: 'CARTE_BANCAIRE', label: 'Carte bancaire' },
+  { cle: 'KKIAPAY', label: 'Mobile Money / Carte (KKiaPay)' },
   { cle: 'AGENCE', label: 'Paiement en agence' },
 ];
 const MOBILE_MONEY = ['MTN_MOMO', 'MOOV_MONEY', 'CELTIIS_CASH'];
@@ -41,7 +38,7 @@ export default function ChaineDetailScreen({ navigation, route }) {
   const [chargementAbonnement, setChargementAbonnement] = useState(false);
   const [erreur, setErreur] = useState(null);
   const [choixPaiementOuvert, setChoixPaiementOuvert] = useState(false);
-  const [moyenPaiement, setMoyenPaiement] = useState('MTN_MOMO');
+  const [moyenPaiement, setMoyenPaiement] = useState('KKIAPAY');
   const [telephonePayeur, setTelephonePayeur] = useState(TELEPHONE_TEST_SANDBOX);
   const [message, setMessage] = useState(null);
 
@@ -107,6 +104,18 @@ export default function ChaineDetailScreen({ navigation, route }) {
         moyenPaiement,
         telephonePayeur: MOBILE_MONEY.includes(moyenPaiement) ? telephonePayeur.trim() : undefined,
       });
+      if (moyenPaiement === 'KKIAPAY') {
+        setMessage('Ouverture du paiement KKiaPay...');
+        const finale = await payerAvecKkiapay({ transactionId: transaction.id, montantFcfa: transaction.montantFcfa, motif: 'Fan club My Addictive' });
+        if (finale.statut === 'REUSSI') {
+          setMessage('Paiement confirme : bienvenue dans le fan club !');
+          await chargerFanClub();
+        } else {
+          setMessage("Le paiement n'a pas abouti. Vous pouvez reessayer.");
+        }
+        setChoixPaiementOuvert(false);
+        return;
+      }
       if (transaction.statut === 'REUSSI') {
         setMessage('Paiement confirme : bienvenue dans le fan club !');
         await chargerFanClub();

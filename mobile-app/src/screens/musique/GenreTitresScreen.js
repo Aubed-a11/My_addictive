@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { titresLisibles } from '../../utils/libelles';
 import { Text, StyleSheet, FlatList, View, Pressable, Image, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import client from '../../api/client';
@@ -15,7 +16,7 @@ export default function GenreTitresScreen({ navigation, route }) {
   useEffect(() => {
     (async () => {
       const { data } = await client.get('/api/musique/titres', { params: { genre, page: 0, size: 30 } });
-      setTitres(data.content || []);
+      setTitres(titresLisibles(data.content));
     })();
   }, [genre]);
 

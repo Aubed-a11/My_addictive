@@ -19,10 +19,6 @@ import { formaterGenre } from '../../utils/libelles';
 
 const MOYENS_PAIEMENT = [
   { cle: 'KKIAPAY', label: 'Mobile Money / Carte (KKiaPay)' },
-  { cle: 'MTN_MOMO', label: 'MTN Mobile Money' },
-  { cle: 'MOOV_MONEY', label: 'Moov Money' },
-  { cle: 'CELTIIS_CASH', label: 'Celtiis Cash' },
-  { cle: 'CARTE_BANCAIRE', label: 'Carte bancaire' },
   { cle: 'AGENCE', label: 'Paiement en agence' },
 ];
 const MOBILE_MONEY = ['MTN_MOMO', 'MOOV_MONEY', 'CELTIIS_CASH'];

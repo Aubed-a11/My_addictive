@@ -13,6 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../theme/colors';
 import { resoudreUrlImage } from '../../utils/urlImage';
 import IconePlaceholder from '../../components/IconePlaceholder';
+import LecteurVideo from '../../components/LecteurVideo';
 import EnteteLogo from '../../components/EnteteLogo';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
 import { TELEPHONE_TEST_SANDBOX } from '../../utils/paiementKkiapay';
@@ -21,10 +22,6 @@ const LIBELLES_STATUT = { A_VENIR: 'A venir', EN_DIRECT: 'En direct', TERMINE: '
 
 const MOYENS_PAIEMENT = [
   { cle: 'KKIAPAY', label: 'Mobile Money / Carte (KKiaPay)' },
-  { cle: 'MTN_MOMO', label: 'MTN Mobile Money' },
-  { cle: 'MOOV_MONEY', label: 'Moov Money' },
-  { cle: 'CELTIIS_CASH', label: 'Celtiis Cash' },
-  { cle: 'CARTE_BANCAIRE', label: 'Carte bancaire' },
   { cle: 'AGENCE', label: 'Paiement en agence' },
 ];
 
@@ -220,16 +217,8 @@ export default function EvenementDetailScreen({ navigation, route }) {
         </Text>
         {evenement.description && <Text style={styles.description}>{evenement.description}</Text>}
 
-        {evenement.statut === 'EN_DIRECT' && (
-          <View style={styles.lecteur}>
-            <Text style={styles.lecteurTexte}>Lecteur video en direct (a integrer : ex. react-native-video pointant vers evenement.urlFlux)</Text>
-          </View>
-        )}
-        {evenement.statut === 'REPLAY' && (
-          <View style={styles.lecteur}>
-            <Text style={styles.lecteurTexte}>Replay disponible (a integrer : evenement.urlReplay)</Text>
-          </View>
-        )}
+        {evenement.statut === 'EN_DIRECT' && <LecteurVideo url={evenement.urlFlux} enDirect />}
+        {evenement.statut === 'REPLAY' && <LecteurVideo url={evenement.urlReplay} />}
 
         <MessageErreur message={erreur} />
         {message && <Text style={styles.message}>{message}</Text>}

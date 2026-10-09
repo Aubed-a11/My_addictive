@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { titresLisibles } from '../../utils/libelles';
 import { Text, StyleSheet, FlatList, View, Image, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Headphones, Download, ShoppingBag } from 'lucide-react-native';
@@ -23,7 +24,7 @@ export default function ClassementMusiqueScreen({ navigation, route }) {
   useEffect(() => {
     (async () => {
       const { data } = await client.get('/api/musique/classements', { params: { type, page: 0, size: 30 } });
-      setTitres(data.content || []);
+      setTitres(titresLisibles(data.content));
     })();
   }, [type]);
 

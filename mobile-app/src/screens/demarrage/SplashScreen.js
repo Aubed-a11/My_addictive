@@ -5,9 +5,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Logo from '../../components/Logo';
 import { COLORS } from '../../theme/colors';
 
-// Duree de l'ecran de demarrage, fixee a 15s a la demande explicite du
-// commanditaire. Ajuster cette seule constante si besoin.
-const DUREE_MS = 15000;
+// Duree de l'ecran de demarrage : 2 secondes (elle etait de 15s). Un
+// demarrage trop long fait perdre des utilisateurs avant meme la
+// decouverte du produit (audit UX). Ajuster cette seule constante si besoin.
+const DUREE_MS = 2000;
 
 /**
  * Ecran de demarrage (splash), fidele a la maquette de reference : fond
