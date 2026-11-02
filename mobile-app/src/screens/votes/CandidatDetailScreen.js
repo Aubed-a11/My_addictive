@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import LecteurVideo from '../../components/LecteurVideo';
 import { View, Text, StyleSheet, Image, ActivityIndicator, Pressable, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Video, ResizeMode } from 'expo-av';
@@ -130,14 +131,7 @@ export default function CandidatDetailScreen({ navigation, route }) {
 
         {candidat.videoUrl ? (
           <View style={styles.lecteurVideo}>
-            <Video
-              source={{ uri: resoudreUrlImage(candidat.videoUrl) }}
-              style={styles.video}
-              useNativeControls
-              resizeMode={ResizeMode.CONTAIN}
-              posterSource={candidat.photoUrl ? { uri: resoudreUrlImage(candidat.photoUrl) } : undefined}
-              usePoster
-            />
+            <LecteurVideo url={resoudreUrlImage(candidat.videoUrl)} lectureAuto={false} />
           </View>
         ) : (
           <View style={styles.pasDeVideoConteneur}>

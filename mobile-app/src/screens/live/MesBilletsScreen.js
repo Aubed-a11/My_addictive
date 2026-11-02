@@ -23,8 +23,12 @@ export default function MesBilletsScreen({ navigation }) {
 
   useEffect(() => {
     (async () => {
+      try {
       const { data } = await client.get('/api/live/billets/mes-billets');
       setBillets(data);
+      } catch (e) {
+        console.warn('[chargement] echec :', e && e.message);
+      }
     })();
   }, []);
 

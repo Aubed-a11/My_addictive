@@ -15,6 +15,8 @@ import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../theme/colors';
 import { resoudreUrlImage, resoudreUrlFichier } from '../../utils/urlImage';
 import IconePlaceholder from '../../components/IconePlaceholder';
+import LecteurVideo from '../../components/LecteurVideo';
+import { urlIntegrable } from '../../utils/youtube';
 
 /**
  * Lecteur plein ecran, fidele a la maquette de reference fournie (theme
@@ -419,9 +421,14 @@ export default function LecteurScreen({ navigation, route }) {
             </Pressable>
           </View>
         )}
-        {chargementEchoue && dejaAchete && (
+        {chargementEchoue && dejaAchete && !!urlIntegrable(titre.youtubeUrl) && (
+          <View style={{ height: 210, marginVertical: 10, borderRadius: 12, overflow: 'hidden' }}>
+            <LecteurVideo url={titre.youtubeUrl} lectureAuto={false} />
+          </View>
+        )}
+        {chargementEchoue && dejaAchete && !urlIntegrable(titre.youtubeUrl) && (
           <Text style={styles.messageApercu}>
-            Fichier audio original non disponible pour ce titre : aperçu visuel uniquement.
+            Fichier audio pas encore disponible pour ce titre. Il sera ajouté prochainement.
           </Text>
         )}
 

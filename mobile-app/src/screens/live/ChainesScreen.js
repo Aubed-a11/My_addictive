@@ -13,8 +13,12 @@ export default function ChainesScreen({ navigation }) {
 
   useEffect(() => {
     (async () => {
+      try {
       const { data } = await client.get('/api/live/chaines', { params: { page: 0, size: 30 } });
       setChaines(data.content || []);
+      } catch (e) {
+        console.warn('[chargement] echec :', e && e.message);
+      }
     })();
   }, []);
 

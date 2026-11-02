@@ -20,8 +20,12 @@ export default function CompetitionsListeScreen({ navigation }) {
 
   useEffect(() => {
     (async () => {
+      try {
       const { data } = await client.get('/api/votes/competitions', { params: { page: 0, size: 30 } });
       setCompetitions(data.content || []);
+      } catch (e) {
+        console.warn('[chargement] echec :', e && e.message);
+      }
     })();
   }, []);
 

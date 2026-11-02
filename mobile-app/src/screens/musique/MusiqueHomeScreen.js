@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Image, ImageBackground, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Heart } from 'lucide-react-native';
@@ -30,25 +30,34 @@ export default function MusiqueHomeScreen({ navigation }) {
   const [rechercheOuverte, setRechercheOuverte] = useState(false);
   const [recherche, setRecherche] = useState('');
 
+  const derniereRequete = useRef(0);
+
   const charger = useCallback(async (o, texteRecherche) => {
+    // Chaque requete porte un numero : si l'utilisateur continue de taper, la
+    // reponse d'une ancienne saisie (arrivee en retard) est ignoree.
+    const numero = ++derniereRequete.current;
     setChargement(true);
     try {
-      // Une recherche interroge tout le catalogue cote serveur (parametre
-      // "recherche"), plutot que de filtrer seulement les quelques titres
-      // deja charges localement : indispensable pour retrouver un titre qui
-      // ne fait pas partie de la premiere page (catalogue de plusieurs
-      // milliers de titres), par exemple un ajout recent.
       const params = texteRecherche?.trim()
-        ? { recherche: texteRecherche.trim(), page: 0, size: 30 }
+        ? { recherche: texteRecherche.trim(), page: 0, size: 50 }
         : { gratuit: o === 'gratuit', page: 0, size: 30 };
       const { data } = await client.get('/api/musique/titres', { params });
+      if (numero !== derniereRequete.current) return;
       setTitres(titresLisibles(data.content));
+    } catch (e) {
+      if (numero !== derniereRequete.current) return;
+      setTitres([]);
     } finally {
-      setChargement(false);
+      if (numero === derniereRequete.current) setChargement(false);
     }
   }, []);
 
-  useEffect(() => { charger(onglet, recherche); }, [onglet, recherche, charger]);
+  // Recherche declenchee 350 ms apres la derniere touche (et non a chaque lettre).
+  useEffect(() => {
+    const delai = recherche.trim() ? 350 : 0;
+    const minuteur = setTimeout(() => { charger(onglet, recherche); }, delai);
+    return () => clearTimeout(minuteur);
+  }, [onglet, recherche, charger]);
 
   // On ne masque les titres sans fichier reel que sur l'onglet gratuit, et
   // seulement hors recherche (une recherche doit pouvoir retrouver n'importe
@@ -56,7 +65,7 @@ export default function MusiqueHomeScreen({ navigation }) {
   // sur l'onglet payant, l'URL du fichier est volontairement absente tant
   // que le titre n'est pas achete (mesure de securite), donc filtrer sur ce
   // champ y cacherait a tort tous les titres payants non encore achetes.
-  const titresAvecAudio = (onglet === 'gratuit' && !recherche.trim()) ? titres.filter((t) => !!t.fichierAudioUrl) : titres;
+  const titresAvecAudio = (onglet === 'gratuit' && !recherche.trim()) ? titres.filter((t) => !!t.fichierAudioUrl || !!t.youtubeUrl) : titres;
 
   const titresAffiches = titresAvecAudio;
 

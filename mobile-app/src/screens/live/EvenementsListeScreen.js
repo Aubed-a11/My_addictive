@@ -33,8 +33,12 @@ export default function EvenementsListeScreen({ navigation }) {
 
   useEffect(() => {
     (async () => {
+      try {
       const { data } = await client.get('/api/live/evenements', { params: { statut: filtre || undefined, page: 0, size: 30 } });
       setEvenements(data.content || []);
+      } catch (e) {
+        console.warn('[chargement] echec :', e && e.message);
+      }
     })();
   }, [filtre]);
 

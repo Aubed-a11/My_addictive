@@ -15,8 +15,12 @@ export default function GenreTitresScreen({ navigation, route }) {
 
   useEffect(() => {
     (async () => {
+      try {
       const { data } = await client.get('/api/musique/titres', { params: { genre, page: 0, size: 30 } });
       setTitres(titresLisibles(data.content));
+      } catch (e) {
+        console.warn('[chargement] echec :', e && e.message);
+      }
     })();
   }, [genre]);
 

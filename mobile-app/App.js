@@ -1,4 +1,5 @@
 import 'react-native-gesture-handler'; // DOIT etre le tout premier import : requis par React Navigation.
+import './src/utils/alerteWeb'; // Alert.alert fonctionnel sur le web (sinon silencieux)
 import React, { useCallback, useEffect } from 'react';
 import { View, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';

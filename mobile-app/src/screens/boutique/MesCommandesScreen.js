@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Text, StyleSheet, FlatList, View, Pressable } from 'react-native';
+import { Text, StyleSheet, FlatList, View, Pressable, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
@@ -18,16 +18,25 @@ export default function MesCommandesScreen({ navigation }) {
 
   useEffect(() => {
     (async () => {
+      try {
       const { data } = await client.get('/api/boutique/commandes');
       setCommandes(data);
+      } catch (e) {
+        console.warn('[chargement] echec :', e && e.message);
+      }
     })();
   }, []);
 
   const basculer = async (commandeId) => {
     if (commandeOuverte === commandeId) { setCommandeOuverte(null); return; }
     if (!lignesParCommande[commandeId]) {
-      const { data } = await client.get(`/api/boutique/commandes/${commandeId}/lignes`);
-      setLignesParCommande((prev) => ({ ...prev, [commandeId]: data }));
+      try {
+        const { data } = await client.get(`/api/boutique/commandes/${commandeId}/lignes`);
+        setLignesParCommande((prev) => ({ ...prev, [commandeId]: data }));
+      } catch (e) {
+        Alert.alert('Erreur', e.message || 'Impossible de charger le detail de la commande.');
+        return;
+      }
     }
     setCommandeOuverte(commandeId);
   };

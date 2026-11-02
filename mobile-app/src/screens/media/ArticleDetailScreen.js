@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const WebView = Platform.OS === 'web' ? null : require('react-native-webview').WebView;
 import { Share2, Heart, Eye, BookOpen, Video, PlayCircle } from 'lucide-react-native';
 import client from '../../api/client';
+import { urlIntegrable } from '../../utils/youtube';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../theme/colors';
 import { resoudreUrlImage } from '../../utils/urlImage';
@@ -77,14 +78,14 @@ export default function ArticleDetailScreen({ navigation, route }) {
               Platform.OS === 'web' ? (
                 // @ts-ignore -- balise HTML native, valide en React Native Web
                 <iframe
-                  src={article.videoUrl}
+                  src={urlIntegrable(article.videoUrl) || article.videoUrl}
                   style={{ width: '100%', height: '100%', border: 0 }}
                   allow="autoplay; fullscreen; encrypted-media"
                   allowFullScreen
                 />
               ) : (
                 <WebView
-                  source={{ uri: article.videoUrl }}
+                  source={{ uri: urlIntegrable(article.videoUrl) || article.videoUrl }}
                   style={styles.video}
                   allowsFullscreenVideo
                   javaScriptEnabled

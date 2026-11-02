@@ -23,15 +23,23 @@ export default function BoutiqueHomeScreen({ navigation }) {
 
   useEffect(() => {
     (async () => {
+      try {
       const { data } = await client.get('/api/boutique/produits', { params: { categorie: categorie || undefined, page: 0, size: 30 } });
       setProduits(data.content || []);
+      } catch (e) {
+        console.warn('[chargement] echec :', e && e.message);
+      }
     })();
   }, [categorie]);
 
   useEffect(() => {
     (async () => {
+      try {
       const { data } = await client.get('/api/boutique/produits/drops', { params: { page: 0, size: 10 } });
       setDrops(data.content || []);
+      } catch (e) {
+        console.warn('[chargement] echec :', e && e.message);
+      }
     })();
   }, []);
 

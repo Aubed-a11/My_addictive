@@ -15,3 +15,19 @@ export function extraireIdYoutube(url) {
 export function vignetteYoutube(idVideo) {
   return `https://img.youtube.com/vi/${idVideo}/hqdefault.jpg`;
 }
+
+/**
+ * Adresse "integrable" (iframe / WebView) pour les liens YouTube et Vimeo, qui refusent d'etre affiches
+ * depuis leur page normale (watch?v=...). Renvoie null si le lien n'est ni YouTube ni Vimeo (fichier video, HLS...).
+ */
+export function urlIntegrable(url, lectureAuto = true) {
+  if (!url) return null;
+  const idYoutube = extraireIdYoutube(url);
+  if (idYoutube) return `https://www.youtube.com/embed/${idYoutube}?rel=0&playsinline=1${lectureAuto ? '&autoplay=1' : ''}`;
+  const vimeo = String(url).match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}${lectureAuto ? '?autoplay=1' : ''}`;
+  // Direct YouTube sans identifiant 11 car. reconnu (ex. /live/ID) : tente l'extraction simple.
+  const live = String(url).match(/youtube\.com\/live\/([a-zA-Z0-9_-]{11})/);
+  if (live) return `https://www.youtube.com/embed/${live[1]}?rel=0&playsinline=1${lectureAuto ? '&autoplay=1' : ''}`;
+  return null;
+}

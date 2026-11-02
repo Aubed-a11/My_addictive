@@ -13,8 +13,12 @@ export default function AlbumsScreen({ navigation }) {
 
   useEffect(() => {
     (async () => {
+      try {
       const { data } = await client.get('/api/musique/albums', { params: { page: 0, size: 30 } });
       setAlbums(data.content || []);
+      } catch (e) {
+        console.warn('[chargement] echec :', e && e.message);
+      }
     })();
   }, []);
 

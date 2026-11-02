@@ -17,13 +17,21 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     (async () => {
-      const jetonStocke = await AsyncStorage.getItem('jeton');
-      const utilisateurStocke = await AsyncStorage.getItem('utilisateur');
-      if (jetonStocke && utilisateurStocke) {
-        setJeton(jetonStocke);
-        setUtilisateur(JSON.parse(utilisateurStocke));
+      try {
+        const jetonStocke = await AsyncStorage.getItem('jeton');
+        const utilisateurStocke = await AsyncStorage.getItem('utilisateur');
+        if (jetonStocke && utilisateurStocke) {
+          setUtilisateur(JSON.parse(utilisateurStocke));
+          setJeton(jetonStocke);
+        }
+      } catch (e) {
+        // Stockage inaccessible (navigation privee...) ou valeur corrompue : on repart en visiteur
+        // au lieu de rester bloque sur l'ecran de demarrage.
+        console.warn('[session] lecture impossible, retour en mode visiteur :', e && e.message);
+        try { await AsyncStorage.multiRemove(['jeton', 'utilisateur']); } catch (_) { /* rien a faire */ }
+      } finally {
+        setPret(true);
       }
-      setPret(true);
     })();
   }, []);
 

@@ -2,6 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { COLORS } from '../theme/colors';
+import { urlIntegrable } from '../utils/youtube';
+
+const WebView = Platform.OS === 'web' ? null : require('react-native-webview').WebView;
 
 /**
  * Lecteur video reel pour le direct (flux HLS .m3u8) et les replays (mp4/HLS).
@@ -53,12 +56,30 @@ function LecteurWebHls({ url, enDirect }) {
   return React.createElement('video', { ref, controls: true, playsInline: true, autoPlay: true, style: { width: '100%', height: '100%', backgroundColor: '#000' } });
 }
 
-export default function LecteurVideo({ url, enDirect = false, messageAbsent }) {
+export default function LecteurVideo({ url, enDirect = false, messageAbsent, lectureAuto = true }) {
   const [erreur, setErreur] = useState(null);
   if (!url) {
     return (
       <View style={styles.conteneur}>
         <Text style={styles.texte}>{messageAbsent || (enDirect ? "Le direct n'a pas encore commence ou votre acces n'est pas valide." : "Le replay n'est pas encore disponible.")}</Text>
+      </View>
+    );
+  }
+  // YouTube / Vimeo : page integree (iframe sur le web, WebView sur mobile) car expo-av ne sait lire que des fichiers/flux.
+  const integrable = urlIntegrable(url, lectureAuto);
+  if (integrable) {
+    return (
+      <View style={styles.conteneur}>
+        {Platform.OS === 'web' ? (
+          React.createElement('iframe', {
+            src: integrable,
+            style: { width: '100%', height: '100%', border: 0 },
+            allow: 'autoplay; fullscreen; encrypted-media; picture-in-picture',
+            allowFullScreen: true,
+          })
+        ) : (
+          <WebView source={{ uri: integrable }} style={StyleSheet.absoluteFill} allowsFullscreenVideo javaScriptEnabled mediaPlaybackRequiresUserAction={false} />
+        )}
       </View>
     );
   }
@@ -72,7 +93,7 @@ export default function LecteurVideo({ url, enDirect = false, messageAbsent }) {
             source={{ uri: url }}
             style={StyleSheet.absoluteFill}
             useNativeControls
-            shouldPlay
+            shouldPlay={lectureAuto}
             resizeMode={ResizeMode.CONTAIN}
             onError={() => setErreur('Impossible de lire la video.')}
           />

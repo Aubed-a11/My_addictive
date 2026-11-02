@@ -2,7 +2,12 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Voir .env.example : adapter selon l'environnement (emulateur, telephone physique, production).
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8090';
+const URL_PRODUCTION = 'https://76-13-37-17.nip.io';
+// Valeur de secours : si la variable n'est pas definie dans Vercel (le fichier .env n'est pas
+// versionne), le site publie utilise le serveur de production au lieu de http://localhost:8090.
+const SUR_SITE_PUBLIE = typeof window !== 'undefined' && window.location
+  && !/^(localhost|127\.0\.0\.1)$/.test(window.location.hostname) && window.location.protocol === 'https:';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || (SUR_SITE_PUBLIE ? URL_PRODUCTION : 'http://localhost:8090');
 
 const client = axios.create({ baseURL: API_BASE_URL, timeout: 15000 });
 

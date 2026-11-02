@@ -1,7 +1,8 @@
 import { ouvrirWidgetKkiapay } from './kkiapay';
 import client from '../api/client';
 
-const CLE_PUBLIQUE = process.env.EXPO_PUBLIC_KKIAPAY_PUBLIC_KEY;
+// Cle PUBLIQUE KKiaPay (visible dans le widget par nature) : valeur de secours si la variable Vercel manque.
+const CLE_PUBLIQUE = process.env.EXPO_PUBLIC_KKIAPAY_PUBLIC_KEY || '2768ba30b26211f1b65337f63117265d';
 const SANDBOX = process.env.EXPO_PUBLIC_KKIAPAY_SANDBOX !== 'false';
 export { SANDBOX };
 

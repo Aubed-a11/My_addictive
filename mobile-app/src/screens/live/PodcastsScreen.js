@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, Image, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, Image, ImageBackground, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -17,21 +17,33 @@ export default function PodcastsScreen({ navigation }) {
 
   useEffect(() => {
     (async () => {
+      try {
       const { data } = await client.get('/api/live/podcasts', { params: { page: 0, size: 30 } });
       setPodcasts(data.content || []);
+      } catch (e) {
+        console.warn('[chargement] echec :', e && e.message);
+      }
     })();
   }, []);
 
   const voirEpisodes = async (id) => {
-    const { data } = await client.get(`/api/live/podcasts/${id}/episodes`);
-    setEpisodesParPodcast((prev) => ({ ...prev, [id]: data }));
+    try {
+      const { data } = await client.get(`/api/live/podcasts/${id}/episodes`);
+      setEpisodesParPodcast((prev) => ({ ...prev, [id]: data }));
+    } catch (e) {
+      Alert.alert('Erreur', e.message || 'Impossible de charger les episodes.');
+    }
   };
 
   // Abonnement a une emission (section 6.4) : notification a la sortie d'un nouvel episode.
   const abonner = async (id) => {
     if (!estConnecte) { navigation.navigate('Connexion'); return; }
-    await client.post(`/api/live/podcasts/${id}/abonnement`);
-    setAbonnes((prev) => ({ ...prev, [id]: true }));
+    try {
+      await client.post(`/api/live/podcasts/${id}/abonnement`);
+      setAbonnes((prev) => ({ ...prev, [id]: true }));
+    } catch (e) {
+      Alert.alert('Erreur', e.message || "Abonnement impossible pour le moment.");
+    }
   };
 
   return (
