@@ -27,7 +27,7 @@
     <maven.compiler.parameters>true</maven.compiler.parameters>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <spring-boot.version>3.2.5</spring-boot.version>
-    <spring-cloud.version>2023.0.1</spring-cloud.version>
+    <spring-cloud.version>2025.1.4</spring-cloud.version>
     <jjwt.version>0.12.5</jjwt.version>
   </properties>
 
