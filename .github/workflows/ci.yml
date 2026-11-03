@@ -18,7 +18,7 @@ jobs:
     name: Aucun secret dans Git
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Recherche de cles et mots de passe
         run: |
           if git ls-files -z | xargs -0 grep -nIE '(tsk|tpr)_[0-9a-f]{16,}|MAIL_PASSWORD=[A-Za-z0-9]{8,}|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY' ; then
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -51,7 +51,7 @@ jobs:
     name: Dashboard admin (build)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -68,7 +68,7 @@ jobs:
     name: App mobile et web (build)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -85,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

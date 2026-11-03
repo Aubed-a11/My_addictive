@@ -15,7 +15,7 @@ jobs:
     env:
       URL: ${{ vars.PUBLIC_URL || 'https://76-13-37-17.nip.io' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Tests de fumee
         run: BASE_URL="$URL" RETRIES=3 DELAY=20 bash devops/tests-fumee.sh
       - name: Certificat HTTPS (alerte si moins de 14 jours)
