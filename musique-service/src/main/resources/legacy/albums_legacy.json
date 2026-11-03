@@ -1,0 +1,106 @@
+[
+  {
+    "titre": "En attendant l'EP",
+    "artiste": "LEK",
+    "genre": "afro#",
+    "imageUrl": "/api/media/fichiers/artistes/albums/1000/small_EnattendantlEP.png",
+    "dateSortie": "2019",
+    "sourceLegacyId": "1000"
+  },
+  {
+    "titre": "GHETTO VI",
+    "artiste": "Togbe Yeton",
+    "genre": "rap#afro#",
+    "imageUrl": "/api/media/fichiers/artistes/albums/1003/small_gbettovi.png",
+    "dateSortie": "2020",
+    "sourceLegacyId": "1003"
+  },
+  {
+    "titre": "Winxagun",
+    "artiste": "Black Monarc MC",
+    "genre": "rap#",
+    "imageUrl": "/api/media/fichiers/artistes/albums/1002/small_black_monarc_winxagun.png",
+    "dateSortie": "2020",
+    "sourceLegacyId": "1002"
+  },
+  {
+    "titre": "GOR",
+    "artiste": "BlvckBurn",
+    "genre": "rap#",
+    "imageUrl": "/api/media/fichiers/artistes/albums/1016/small_blvckburn-gor.jpeg",
+    "dateSortie": "2021",
+    "sourceLegacyId": "1016"
+  },
+  {
+    "titre": "REQUIEM",
+    "artiste": "Zifa",
+    "genre": "rap#afro#",
+    "imageUrl": "/api/media/fichiers/artistes/albums/1004/small_requiem.jpeg",
+    "dateSortie": "2020",
+    "sourceLegacyId": "1004"
+  },
+  {
+    "titre": "Best Of Yvan Pour Yesue",
+    "artiste": "Yvan Pour Yesue",
+    "genre": "afro#rap#gospel#variete#",
+    "imageUrl": "/api/media/fichiers/artistes/albums/1005/small_yvan-pour-yesue-duce-best-of-yvan-pour-yesue.jpeg",
+    "dateSortie": "2020",
+    "sourceLegacyId": "1005"
+  },
+  {
+    "titre": "Aklanti",
+    "artiste": "Erythier",
+    "genre": "afro#rap#",
+    "imageUrl": "/api/media/fichiers/artistes/albums/1010/small_erythier-aklanti.jpeg",
+    "dateSortie": "2020",
+    "sourceLegacyId": "1010"
+  },
+  {
+    "titre": "Faabelan Chap 1",
+    "artiste": "Jupiter Davibe",
+    "genre": "afro#rap#",
+    "imageUrl": "/api/media/fichiers/artistes/albums/1011/small_jupiter-davibe-magasco-fanicko-josey-didi-b-oxmo-puccino-faabelan-chap-1.png",
+    "dateSortie": "2020",
+    "sourceLegacyId": "1011"
+  },
+  {
+    "titre": "The Best Of Crisba",
+    "artiste": "Crisba",
+    "genre": "afro#rap#",
+    "imageUrl": "/api/media/fichiers/artistes/albums/1012/small_crisba-sirano-eudoxie-yao-the-best-of-crisba.png",
+    "dateSortie": "2021",
+    "sourceLegacyId": "1012"
+  },
+  {
+    "titre": "Focus 1",
+    "artiste": "Spyd Phil",
+    "genre": "afro#",
+    "imageUrl": "/api/media/fichiers/artistes/albums/1014/small_spyd-phil-focus-1.jpeg",
+    "dateSortie": "2021",
+    "sourceLegacyId": "1014"
+  },
+  {
+    "titre": "Afro One Riddim By Jowaoh",
+    "artiste": "Jowaoh",
+    "genre": "afro#",
+    "imageUrl": "/api/media/fichiers/artistes/albums/1015/small_jowaoh-fafa-ruffino-sensitive-ivo-week-skity-tchakiti-babajeje-biirxam-ralami-tang-afro-one-riddim-by-jowaoh.jpeg",
+    "dateSortie": "2021",
+    "sourceLegacyId": "1015"
+  },
+  {
+    "titre": "Vodun Gospel",
+    "artiste": "Sergent Markus",
+    "genre": "slam#",
+    "imageUrl": "/api/media/fichiers/artistes/albums/1017/small_sergent-markus-fafa-ruffino-nel-oliver-faty-ife-lartiste-don-metok-duo-landry-stella-adjoke-vodoun-gospel.png",
+    "dateSortie": "2023",
+    "sourceLegacyId": "1017"
+  },
+  {
+    "titre": "Loko",
+    "artiste": "Yewhe Yeton",
+    "genre": "rap#",
+    "imageUrl": "/api/media/fichiers/artistes/albums/1018/small_yewhe-yeton-loko.jpeg",
+    "dateSortie": "2025",
+    "sourceLegacyId": "1018"
+  }
+]

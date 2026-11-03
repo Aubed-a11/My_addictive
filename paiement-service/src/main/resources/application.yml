@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: paiement-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+
+# Repli local si config-service est injoignable ou pas encore pret au demarrage
+# (evite que plusieurs services ne demarrent tous sur le port 8080 par defaut
+# de Spring Boot, ce qui provoquerait des collisions en cascade). La valeur
+# distante de config-repo/paiement-service.yml prevaut normalement une fois chargee.
+server:
+  port: 8087

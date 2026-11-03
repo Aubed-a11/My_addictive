@@ -16,7 +16,7 @@ un_passage() {
   [ "$c" = 403 ] && echo "OK   webhook generique bloque : 403" || { echo "FAIL webhook generique : $c (attendu 403)"; ko=1; }
   c=$(code -X POST "$BASE_URL/paiement-service/api/paiement/webhook/1")
   { [ "$c" = 403 ] || [ "$c" = 404 ]; } && echo "OK   contournement par nom de service bloque : $c" || { echo "FAIL contournement : $c (attendu 403/404)"; ko=1; }
-  c=$(code -X POST "$BASE_URL/api/interne/musique/paiement-confirme" -H "Content-Type: application/json" -d '{}')
+  c=$(code -X POST "$BASE_URL/api/interne/paiement-confirme" -H "Content-Type: application/json" -d '{}')
   [ "$c" = 403 ] && echo "OK   endpoints internes bloques : 403" || { echo "FAIL endpoints internes : $c (attendu 403)"; ko=1; }
   return $ko
 }

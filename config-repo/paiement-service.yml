@@ -1,0 +1,62 @@
+server:
+  port: 8087
+spring:
+  datasource:
+    # Base unique SQLite partagee par tous les services (volume Docker commun).
+    # Les tables de ce service sont prefixees "paiement_" (voir PrefixedNamingStrategy).
+    # WAL + busy_timeout : plusieurs services peuvent ecrire dans le meme fichier ;
+    # transaction_mode=IMMEDIATE evite les erreurs de verrou lors d'une lecture
+    # suivie d'une ecriture dans la meme transaction.
+    url: jdbc:sqlite:${APP_DB_PATH:/app/shared-db/myaddictive.db}?journal_mode=WAL&busy_timeout=30000&transaction_mode=IMMEDIATE&synchronous=NORMAL
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 3
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: update
+      naming:
+        physical-strategy: bj.myaddictive.paiement.config.PrefixedNamingStrategy
+    show-sql: false
+paiement:
+  # false (defaut) : aucun paiement n'est "confirme automatiquement". true = developpement local uniquement.
+  simulation-autorisee: ${PAIEMENT_SIMULATION:false}
+mobile-money:
+  # Integration reelle MTN Mobile Money (Collections / Request to Pay).
+  # Laisser subscription-key/api-user/api-key vides = mode simulation
+  # (paiement confirme automatiquement, pratique en local). Une fois ces
+  # identifiants renseignes (obtenus via momodeveloper.mtn.com apres
+  # inscription et validation KYC pour le Benin - voir DEPLOIEMENT.md),
+  # les paiements MTN Mobile Money passent par le vrai flux asynchrone,
+  # confirmes automatiquement par callback ou interrogation periodique,
+  # sans jamais necessiter de validation manuelle.
+  mtn:
+    base-url: ${MTN_MOMO_BASE_URL:https://sandbox.momodeveloper.mtn.com}
+    subscription-key: ${MTN_MOMO_SUBSCRIPTION_KEY:}
+    api-user: ${MTN_MOMO_API_USER:}
+    api-key: ${MTN_MOMO_API_KEY:}
+    target-environment: ${MTN_MOMO_TARGET_ENVIRONMENT:sandbox}
+    # URL PUBLIQUE et HTTPS de ce service (ex. https://api.myaddictive.com),
+    # necessaire pour que MTN puisse appeler notre callback. Sans HTTPS
+    # valide, MTN n'enverra jamais le callback (l'interrogation periodique
+    # prend alors seule le relai).
+    callback-host: ${MTN_MOMO_CALLBACK_HOST:}
+  moov:
+    base-url: ${MOOV_MONEY_BASE_URL:}
+    api-key: ${MOOV_MONEY_API_KEY:}
+  # KKiaPay (mobile money, carte bancaire et autres, en une seule
+  # integration - voir DEPLOIEMENT.md pour la procedure complete). La cle
+  # secrete sert uniquement a verifier que les webhooks recus proviennent
+  # bien de KKiaPay (en-tete x-kkiapay-secret) : sans elle configuree, les
+  # paiements KKiaPay restent bloques EN_ATTENTE indefiniment par securite
+  # (jamais confirmes sans verification). Cles publique/privee : voir
+  # mobile-app/.env.example (cle publique, safe cote client) et le
+  # dashboard KKiaPay (Developpeurs > Cles API).
+  kkiapay:
+    secret-key: ${KKIAPAY_SECRET_KEY:}
+    # Secret du webhook (champ "hash secret" du dashboard). Vide = on reutilise secret-key.
+    webhook-secret: ${KKIAPAY_WEBHOOK_SECRET:}
+    # Verification serveur des paiements (rattrape un webhook manque ou en retard).
+    public-key: ${KKIAPAY_PUBLIC_KEY:}
+    private-key: ${KKIAPAY_PRIVATE_KEY:}
+    sandbox: ${KKIAPAY_SANDBOX:true}

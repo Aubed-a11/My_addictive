@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Demarre TOUT en une seule commande, SANS DOCKER : compile les 4
-# services (application, passerelle, annuaire, configuration) avec Maven, les lance directement en Java (bases de
+# Demarre TOUT en une seule commande, SANS DOCKER : compile les 10
+# microservices avec Maven, les lance directement en Java (bases de
 # base SQLite unique embarquee, pas de Postgres/Redis/RabbitMQ/MinIO a installer),
 # puis lance l'app mobile (Expo) avec detection automatique de l'IP locale.
 #
@@ -59,8 +59,36 @@ else
   info "Aucun .env trouve, valeurs par defaut utilisees (voir .env.example)."
 fi
 
+# ---------- 1bis. Nettoyage de fichiers obsoletes (extraction precedente) ----------
+FICHIERS_OBSOLETES=(
+  "musique-service/src/main/java/bj/myaddictive/musique/config/RabbitMQConsumerConfig.java"
+  "musique-service/src/main/java/bj/myaddictive/musique/messaging/PaiementConfirmeListener.java"
+  "musique-service/src/main/java/bj/myaddictive/musique/messaging/PaiementConfirmeEvent.java"
+  "live-service/src/main/java/bj/myaddictive/live/config/RabbitMQConsumerConfig.java"
+  "live-service/src/main/java/bj/myaddictive/live/messaging/PaiementConfirmeListener.java"
+  "live-service/src/main/java/bj/myaddictive/live/messaging/PaiementConfirmeEvent.java"
+  "votes-service/src/main/java/bj/myaddictive/votes/config/RabbitMQConsumerConfig.java"
+  "votes-service/src/main/java/bj/myaddictive/votes/messaging/PaiementConfirmeListener.java"
+  "votes-service/src/main/java/bj/myaddictive/votes/messaging/PaiementConfirmeEvent.java"
+  "boutique-service/src/main/java/bj/myaddictive/boutique/config/RabbitMQConsumerConfig.java"
+  "boutique-service/src/main/java/bj/myaddictive/boutique/messaging/PaiementConfirmeListener.java"
+  "boutique-service/src/main/java/bj/myaddictive/boutique/messaging/PaiementConfirmeEvent.java"
+  "paiement-service/src/main/java/bj/myaddictive/paiement/config/RabbitMQConfig.java"
+  "paiement-service/src/main/java/bj/myaddictive/paiement/messaging/PaiementEventPublisher.java"
+)
+NETTOYES=0
+for f in "${FICHIERS_OBSOLETES[@]}"; do
+  if [ -f "$f" ]; then
+    rm -f "$f"
+    NETTOYES=$((NETTOYES+1))
+  fi
+done
+if [ "$NETTOYES" -gt 0 ]; then
+  attention "$NETTOYES ancien(s) fichier(s) RabbitMQ obsolete(s) supprime(s) (restes d'une extraction precedente)."
+fi
+
 # ---------- 2. Compilation de tous les microservices (un seul build multi-module) ----------
-info "Compilation des 4 services avec Maven (premiere fois : peut prendre plusieurs minutes)..."
+info "Compilation des 10 microservices avec Maven (premiere fois : peut prendre plusieurs minutes)..."
 if ! mvn -q -DskipTests clean package; then
   erreur "La compilation Maven a echoue. Regarde le message d'erreur ci-dessus (souvent une erreur de compilation Java a corriger)."
   exit 1
@@ -112,18 +140,20 @@ if [ "$config_pret" -eq 0 ]; then
   attention "config-service ne repond pas encore apres 40 secondes ; on continue quand meme."
 fi
 
-info "Lancement de l'application (compte, media, musique, live, votes, boutique, paiement)..."
-lancer_service "app-service"
-sleep 20
+info "Lancement des 7 microservices metier (compte, media, musique, live, votes, boutique, paiement)..."
+for service in compte-service media-service musique-service live-service votes-service boutique-service paiement-service; do
+  lancer_service "$service"
+done
+sleep 15
 
 info "Lancement de la gateway..."
-SPRING_PROFILES_ACTIVE=local lancer_service "gateway-service"
+lancer_service "gateway-service"
 sleep 10
 
-succes "Les 4 services sont lances. Logs consultables dans le dossier logs/."
+succes "Les 10 services sont lances. Logs consultables dans le dossier logs/."
 
 # ---------- 4. Attente que la gateway reponde ----------
-info "Verification que la gateway repond (peut prendre 1 a 2 minutes le temps que tout demarre)..."
+info "Verification que la gateway repond (peut prendre 1 a 2 minutes le temps qu'Eureka enregistre tous les services)..."
 PRET=0
 for i in $(seq 1 60); do
   if curl -sf http://localhost:8090/actuator/health > /dev/null 2>&1; then PRET=1; break; fi
@@ -132,7 +162,7 @@ for i in $(seq 1 60); do
 done
 echo ""
 if [ "$PRET" -eq 0 ]; then
-  attention "La gateway ne repond pas encore. Regarde logs/gateway-service.log et logs/app-service.log si l'app mobile n'arrive pas a se connecter."
+  attention "La gateway ne repond pas encore. Regarde logs/gateway-service.log et logs/discovery-service.log si l'app mobile n'arrive pas a se connecter."
 else
   succes "Backend operationnel."
 fi

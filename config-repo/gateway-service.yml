@@ -10,33 +10,32 @@ spring:
           # Toutes les routes utiles sont declarees explicitement ci-dessous.
           enabled: false
           lower-case-service-id: true
-      # Les 7 anciens services sont regroupes dans app-service : toutes les routes pointent vers lui.
       routes:
         - id: compte-service
-          uri: http://app-service:8080
+          uri: lb://compte-service
           predicates:
             - Path=/api/compte/**
         - id: media-service
-          uri: http://app-service:8080
+          uri: lb://media-service
           predicates:
             - Path=/api/media/**
         - id: musique-service
-          uri: http://app-service:8080
+          uri: lb://musique-service
           predicates:
             - Path=/api/musique/**
         - id: live-service
-          uri: http://app-service:8080
+          uri: lb://live-service
           predicates:
             - Path=/api/live/**
         - id: votes-service
-          uri: http://app-service:8080
+          uri: lb://votes-service
           predicates:
             - Path=/api/votes/**
         - id: boutique-service
-          uri: http://app-service:8080
+          uri: lb://boutique-service
           predicates:
             - Path=/api/boutique/**
         - id: paiement-service
-          uri: http://app-service:8080
+          uri: lb://paiement-service
           predicates:
             - Path=/api/paiement/**

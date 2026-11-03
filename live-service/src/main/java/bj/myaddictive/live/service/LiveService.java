@@ -1,0 +1,414 @@
+package bj.myaddictive.live.service;
+
+import bj.myaddictive.live.domain.*;
+import bj.myaddictive.live.dto.InitierAchatBilletRequest;
+import bj.myaddictive.live.exception.ApiException;
+import bj.myaddictive.live.repository.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import java.util.List;
+import java.util.Map;
+
+@Service
+public class LiveService {
+
+    private final EvenementRepository evenementRepository;
+    private final BilletRepository billetRepository;
+    private final ChaineRepository chaineRepository;
+    private final AbonnementChaineRepository abonnementChaineRepository;
+    private final PodcastRepository podcastRepository;
+    private final EpisodeRepository episodeRepository;
+    private final AbonnementPodcastRepository abonnementPodcastRepository;
+    private final AbonnementFanClubRepository abonnementFanClubRepository;
+    private final WebClient.Builder webClientBuilder;
+
+    /** Tarif indicatif du fan club mensuel (section 9.2) ; a ajuster par la direction. */
+    public static final long PRIX_FAN_CLUB_MENSUEL_FCFA = 2000L;
+
+    public LiveService(EvenementRepository evenementRepository, BilletRepository billetRepository,
+                        ChaineRepository chaineRepository, AbonnementChaineRepository abonnementChaineRepository,
+                        PodcastRepository podcastRepository, EpisodeRepository episodeRepository,
+                        AbonnementPodcastRepository abonnementPodcastRepository,
+                        AbonnementFanClubRepository abonnementFanClubRepository,
+                        WebClient.Builder webClientBuilder) {
+        this.evenementRepository = evenementRepository;
+        this.billetRepository = billetRepository;
+        this.chaineRepository = chaineRepository;
+        this.abonnementChaineRepository = abonnementChaineRepository;
+        this.podcastRepository = podcastRepository;
+        this.episodeRepository = episodeRepository;
+        this.abonnementPodcastRepository = abonnementPodcastRepository;
+        this.abonnementFanClubRepository = abonnementFanClubRepository;
+        this.webClientBuilder = webClientBuilder;
+    }
+
+    public Page<Evenement> listerEvenements(StatutEvenement statut, Pageable pageable) {
+        if (statut != null) return evenementRepository.findByStatut(statut, pageable);
+        return evenementRepository.findAll(pageable);
+    }
+
+    public Evenement obtenirEvenement(Long id) {
+        return evenementRepository.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Evenement introuvable."));
+    }
+
+    /**
+     * Masque le lien de diffusion (et le replay) d'un evenement payant tant
+     * que l'utilisateur n'a pas de billet valide, pour eviter qu'il soit
+     * expose publiquement via la fiche detail de l'evenement (le lien de
+     * diffusion en clair suffirait a regarder le live sans jamais payer).
+     */
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
+    public Evenement masquerFluxSiNonAutorise(Evenement evenement, Long utilisateurId) {
+        if (!evenement.isPayant()) return evenement;
+        // Le createur de l'evenement garde ses liens (sinon, en modifiant son evenement, il les effacerait).
+        if (utilisateurId != null && utilisateurId.equals(evenement.getUtilisateurCreateurId())) return evenement;
+        boolean possedeBillet = utilisateurId != null
+                && billetRepository.existsByUtilisateurIdAndEvenementIdAndStatutNot(utilisateurId, evenement.getId(), "ANNULE");
+        if (possedeBillet) return evenement;
+        // Detache l'entite : le masquage ne doit jamais etre enregistre en base par un flush ulterieur.
+        if (entityManager != null && entityManager.contains(evenement)) entityManager.detach(evenement);
+        evenement.setUrlFlux(null);
+        evenement.setUrlReplay(null);
+        return evenement;
+    }
+
+
+    /**
+     * Verifie que l'utilisateur peut acceder au live (chat, etc.) d'un evenement :
+     * acces libre si l'evenement est gratuit, billet valide (paiement confirme,
+     * donc non annule) exige sinon. Appelee avant chaque action reservee aux
+     * spectateurs d'un evenement payant, pour eviter qu'un paiement non abouti
+     * ne donne quand meme acces au contenu.
+     */
+    public void verifierAccesLive(Long evenementId, Long utilisateurId) {
+        Evenement evenement = obtenirEvenement(evenementId);
+        if (!evenement.isPayant()) return;
+        boolean possedeBillet = billetRepository.existsByUtilisateurIdAndEvenementIdAndStatutNot(
+                utilisateurId, evenementId, "ANNULE");
+        if (!possedeBillet) {
+            throw new ApiException(HttpStatus.FORBIDDEN,
+                    "Un billet valide (paiement confirme) est necessaire pour acceder a cet evenement.");
+        }
+    }
+
+    /** Creation/programmation d'un evenement (back-office). */
+    /** Creation/programmation d'un evenement, par le back-office admin ou en auto-service par un organisateur (section 6.1). */
+    public Evenement creerEvenement(Long utilisateurCreateurId, Evenement evenement) {
+        evenement.setUtilisateurCreateurId(utilisateurCreateurId);
+        return evenementRepository.save(evenement);
+    }
+
+    /** Un administrateur peut tout modifier ; un organisateur uniquement ses propres evenements. */
+    public Evenement modifierEvenement(Long id, Evenement donnees, Long utilisateurId, boolean estAdmin) {
+        Evenement evenement = obtenirEvenement(id);
+        verifierPropriete(evenement, utilisateurId, estAdmin);
+        evenement.setTitre(donnees.getTitre());
+        evenement.setLieu(donnees.getLieu());
+        evenement.setImageUrl(donnees.getImageUrl());
+        evenement.setChaineId(donnees.getChaineId());
+        evenement.setDateDebut(donnees.getDateDebut());
+        evenement.setStatut(donnees.getStatut());
+        evenement.setPayant(donnees.isPayant());
+        evenement.setPrixStandardFcfa(donnees.getPrixStandardFcfa());
+        evenement.setPrixVipFcfa(donnees.getPrixVipFcfa());
+        evenement.setUrlFlux(donnees.getUrlFlux());
+        evenement.setUrlReplay(donnees.getUrlReplay());
+        evenement.setReplayDisponibleJusqua(donnees.getReplayDisponibleJusqua());
+        return evenementRepository.save(evenement);
+    }
+
+    public void supprimerEvenement(Long id, Long utilisateurId, boolean estAdmin) {
+        Evenement evenement = obtenirEvenement(id);
+        verifierPropriete(evenement, utilisateurId, estAdmin);
+        evenementRepository.deleteById(id);
+    }
+
+    /** Mes evenements crees (auto-service organisateur). */
+    public List<Evenement> mesEvenementsCrees(Long utilisateurId) {
+        return evenementRepository.findByUtilisateurCreateurId(utilisateurId);
+    }
+
+    private void verifierPropriete(Evenement evenement, Long utilisateurId, boolean estAdmin) {
+        if (estAdmin) return;
+        if (utilisateurId == null || !utilisateurId.equals(evenement.getUtilisateurCreateurId())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Vous ne pouvez modifier que les evenements que vous avez crees.");
+        }
+    }
+
+    /** Achat de billet en deux etapes maximum (section 6.2) : ici, l'etape d'initiation du paiement. */
+    public Map<String, Object> initierAchatBillet(String userId, InitierAchatBilletRequest requete) {
+        Evenement evenement = obtenirEvenement(requete.evenementId());
+        if (evenement.getStatut() == StatutEvenement.TERMINE) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Cet evenement est termine, la billetterie est fermee.");
+        }
+        Integer capacite = requete.categorie() == CategorieBillet.VIP ? evenement.getCapaciteVip() : evenement.getCapaciteStandard();
+        Long prix = requete.categorie() == CategorieBillet.VIP ? evenement.getPrixVipFcfa() : evenement.getPrixStandardFcfa();
+        if (prix == null || prix <= 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Le prix de ce billet n'est pas defini : achat impossible pour le moment.");
+        }
+        // La place est reservee des maintenant (15 min) : plusieurs personnes ne peuvent plus payer la derniere place en meme temps.
+        String cleReservation = reserverPlace(requete.evenementId(), requete.categorie(), capacite);
+
+        Map<String, Object> corps = new java.util.HashMap<>(Map.of(
+                "moyenPaiement", requete.moyenPaiement(),
+                "montantFcfa", prix,
+                "typeObjet", "BILLET",
+                "referenceId", requete.evenementId() + ":" + requete.categorie().name()
+        ));
+        if (requete.telephonePayeur() != null) corps.put("telephonePayeur", requete.telephonePayeur());
+        Map<?, ?> transaction;
+        try {
+            transaction = webClientBuilder.build().post()
+                    .uri("http://paiement-service/api/paiement/transactions")
+                    .header("X-User-Id", userId)
+                    .bodyValue(corps)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+        } catch (RuntimeException e) {
+            reservations.remove(cleReservation); // le paiement n'a pas pu etre initie : la place est liberee
+            throw e;
+        }
+        if (transaction != null && transaction.get("id") != null) {
+            // Rattache la reservation a la transaction : elle sera liberee a la confirmation (le billet compte alors).
+            Reservation r = reservations.remove(cleReservation);
+            if (r != null) reservations.put("tx:" + transaction.get("id"), r);
+        }
+        @SuppressWarnings("unchecked")
+        Map<String, Object> resultat = (Map<String, Object>) transaction;
+        return resultat;
+    }
+
+    // --- Reservation temporaire des places pendant le paiement (en memoire : au pire, un redemarrage
+    // revient au comportement sans reservation, jamais a un refus a tort).
+    private static final long DUREE_RESERVATION_MS = 15 * 60_000L;
+    private record Reservation(Long evenementId, CategorieBillet categorie, long expiration) {}
+    private final java.util.concurrent.ConcurrentHashMap<String, Reservation> reservations = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private synchronized String reserverPlace(Long evenementId, CategorieBillet categorie, Integer capacite) {
+        long maintenant = System.currentTimeMillis();
+        reservations.values().removeIf(r -> r.expiration() < maintenant);
+        if (capacite != null) {
+            long prises = billetRepository.countByEvenementIdAndCategorieAndStatutNot(evenementId, categorie, "ANNULE");
+            long enCours = reservations.values().stream()
+                    .filter(r -> r.evenementId().equals(evenementId) && r.categorie() == categorie).count();
+            if (prises + enCours >= capacite) {
+                throw new ApiException(HttpStatus.CONFLICT, "Complet ! Il n'y a plus de place disponible dans cette categorie.");
+            }
+        }
+        String cle = "tmp:" + java.util.UUID.randomUUID();
+        reservations.put(cle, new Reservation(evenementId, categorie, maintenant + DUREE_RESERVATION_MS));
+        return cle;
+    }
+
+    /** Libere la reservation d'une transaction (appele une fois le billet cree : il compte alors dans les places prises). */
+    public void libererReservation(Long transactionId) {
+        reservations.remove("tx:" + transactionId);
+    }
+
+    /**
+     * Disponibilite des places par categorie (section "urgence d'achat") :
+     * renvoie null pour une categorie sans capacite definie (illimitee),
+     * sinon le nombre de places encore libres (jamais negatif).
+     */
+    public Map<String, Object> disponibilite(Long evenementId) {
+        Evenement evenement = obtenirEvenement(evenementId);
+        Map<String, Object> resultat = new java.util.HashMap<>();
+        if (evenement.getCapaciteStandard() != null) {
+            long prises = billetRepository.countByEvenementIdAndCategorieAndStatutNot(evenementId, CategorieBillet.STANDARD, "ANNULE");
+            resultat.put("standardRestantes", Math.max(0, evenement.getCapaciteStandard() - prises));
+            resultat.put("standardCapacite", evenement.getCapaciteStandard());
+        }
+        if (evenement.getCapaciteVip() != null) {
+            long prises = billetRepository.countByEvenementIdAndCategorieAndStatutNot(evenementId, CategorieBillet.VIP, "ANNULE");
+            resultat.put("vipRestantes", Math.max(0, evenement.getCapaciteVip() - prises));
+            resultat.put("vipCapacite", evenement.getCapaciteVip());
+        }
+        return resultat;
+    }
+
+    public List<bj.myaddictive.live.dto.BilletResponse> mesBillets(Long utilisateurId) {
+        return billetRepository.findByUtilisateurId(utilisateurId).stream()
+                .map(billet -> {
+                    Evenement evenement = evenementRepository.findById(billet.getEvenementId()).orElse(null);
+                    return bj.myaddictive.live.dto.BilletResponse.fromEntities(billet, evenement);
+                })
+                .toList();
+    }
+
+    /** Controle a l'entree par scan (section 6.2). */
+    public Billet scannerBillet(String codeQr) {
+        Billet billet = billetRepository.findByCodeQr(codeQr)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Billet inconnu."));
+        if ("UTILISE".equals(billet.getStatut())) {
+            throw new ApiException(HttpStatus.CONFLICT, "Ce billet a deja ete scanne.");
+        }
+        if ("ANNULE".equals(billet.getStatut())) {
+            throw new ApiException(HttpStatus.CONFLICT, "Ce billet a ete annule.");
+        }
+        billet.setStatut("UTILISE");
+        billet.setDateScan(java.time.Instant.now());
+        return billetRepository.save(billet);
+    }
+
+    public Page<Chaine> listerChaines(Pageable pageable) {
+        return chaineRepository.findAll(pageable);
+    }
+
+    public Chaine obtenirChaine(Long id) {
+        return chaineRepository.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Chaine introuvable."));
+    }
+
+    /** Creation d'une chaine (back-office admin, ou auto-service organisateur/artiste). */
+    public Chaine creerChaine(Long utilisateurId, Chaine chaine) {
+        chaine.setProprietaireUtilisateurId(utilisateurId);
+        chaine.setNombreAbonnes(0L);
+        return chaineRepository.save(chaine);
+    }
+
+    public Chaine modifierChaine(Long id, Chaine donnees) {
+        Chaine chaine = obtenirChaine(id);
+        chaine.setNom(donnees.getNom());
+        chaine.setImageUrl(donnees.getImageUrl());
+        chaine.setDescription(donnees.getDescription());
+        return chaineRepository.save(chaine);
+    }
+
+    public void supprimerChaine(Long id) {
+        if (!chaineRepository.existsById(id)) throw new ApiException(HttpStatus.NOT_FOUND, "Chaine introuvable.");
+        chaineRepository.deleteById(id);
+    }
+
+    public Podcast creerPodcast(Podcast podcast) {
+        return podcastRepository.save(podcast);
+    }
+
+    public Podcast modifierPodcast(Long id, Podcast donnees) {
+        Podcast podcast = podcastRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Podcast introuvable."));
+        podcast.setTitre(donnees.getTitre());
+        podcast.setDescription(donnees.getDescription());
+        podcast.setImageUrl(donnees.getImageUrl());
+        podcast.setChaineId(donnees.getChaineId());
+        return podcastRepository.save(podcast);
+    }
+
+    public void supprimerPodcast(Long id) {
+        if (!podcastRepository.existsById(id)) throw new ApiException(HttpStatus.NOT_FOUND, "Podcast introuvable.");
+        podcastRepository.deleteById(id);
+    }
+
+    public Episode creerEpisode(Episode episode) {
+        podcastRepository.findById(episode.getPodcastId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Podcast introuvable."));
+        return episodeRepository.save(episode);
+    }
+
+    public void supprimerEpisode(Long id) {
+        if (!episodeRepository.existsById(id)) throw new ApiException(HttpStatus.NOT_FOUND, "Episode introuvable.");
+        episodeRepository.deleteById(id);
+    }
+
+    public void abonner(Long utilisateurId, Long chaineId) {
+        if (abonnementChaineRepository.findByUtilisateurIdAndChaineId(utilisateurId, chaineId).isPresent()) return;
+        Chaine chaine = obtenirChaine(chaineId);
+        AbonnementChaine abonnement = new AbonnementChaine();
+        abonnement.setUtilisateurId(utilisateurId);
+        abonnement.setChaineId(chaineId);
+        abonnementChaineRepository.save(abonnement);
+        chaine.setNombreAbonnes(chaine.getNombreAbonnes() + 1);
+        chaineRepository.save(chaine);
+    }
+
+    /** Desabonnement (l'inverse de abonner ci-dessus) : decremente le compteur d'abonnes, sans effet si deja non-abonne. */
+    public void desabonner(Long utilisateurId, Long chaineId) {
+        abonnementChaineRepository.findByUtilisateurIdAndChaineId(utilisateurId, chaineId).ifPresent(abonnement -> {
+            abonnementChaineRepository.delete(abonnement);
+            Chaine chaine = obtenirChaine(chaineId);
+            chaine.setNombreAbonnes(Math.max(0, chaine.getNombreAbonnes() - 1));
+            chaineRepository.save(chaine);
+        });
+    }
+
+    /** Chaines suivies par l'utilisateur (recommandations, section 4.2). */
+    public List<Chaine> mesChainesSuivies(Long utilisateurId) {
+        return abonnementChaineRepository.findByUtilisateurId(utilisateurId).stream()
+                .map(a -> chaineRepository.findById(a.getChaineId()).orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .toList();
+    }
+
+    /**
+     * Fan club ou abonnement mensuel a un artiste (section 9.2) : acces
+     * anticipe, contenu exclusif. Initie le paiement ; l'abonnement n'est
+     * cree/prolonge qu'a la confirmation (voir confirmerAbonnementFanClub).
+     */
+    public Map<String, Object> initierAbonnementFanClub(String userId, Long chaineId, String moyenPaiement, String telephonePayeur) {
+        obtenirChaine(chaineId);
+        Map<String, Object> corps = new java.util.HashMap<>(Map.of(
+                "moyenPaiement", moyenPaiement,
+                "montantFcfa", PRIX_FAN_CLUB_MENSUEL_FCFA,
+                "typeObjet", "FAN_CLUB",
+                "referenceId", String.valueOf(chaineId)
+        ));
+        if (telephonePayeur != null) corps.put("telephonePayeur", telephonePayeur);
+        return webClientBuilder.build().post()
+                .uri("http://paiement-service/api/paiement/transactions")
+                .header("X-User-Id", userId)
+                .bodyValue(corps)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
+    }
+
+    /** Cree l'abonnement ou le prolonge de 30 jours (appele apres confirmation du paiement). */
+    public void confirmerAbonnementFanClub(Long utilisateurId, Long chaineId, Long transactionId) {
+        java.time.Instant maintenant = java.time.Instant.now();
+        AbonnementFanClub abonnement = abonnementFanClubRepository.findByUtilisateurIdAndChaineId(utilisateurId, chaineId)
+                .orElseGet(() -> {
+                    AbonnementFanClub a = new AbonnementFanClub();
+                    a.setUtilisateurId(utilisateurId);
+                    a.setChaineId(chaineId);
+                    a.setDateExpiration(maintenant);
+                    return a;
+                });
+        if (transactionId != null && transactionId.equals(abonnement.getDerniereTransactionId())) {
+            return; // notification deja appliquee (rejouee) : ne pas prolonger une seconde fois
+        }
+        abonnement.setDerniereTransactionId(transactionId);
+        java.time.Instant base = abonnement.getDateExpiration().isAfter(maintenant) ? abonnement.getDateExpiration() : maintenant;
+        abonnement.setDateExpiration(base.plus(30, java.time.temporal.ChronoUnit.DAYS));
+        abonnementFanClubRepository.save(abonnement);
+    }
+
+    /** Statut du fan club pour l'utilisateur courant (acces anticipe/contenu exclusif). */
+    public Map<String, Object> statutFanClub(Long utilisateurId, Long chaineId) {
+        return abonnementFanClubRepository.findByUtilisateurIdAndChaineId(utilisateurId, chaineId)
+                .map(a -> Map.<String, Object>of("actif", a.getDateExpiration().isAfter(java.time.Instant.now()), "dateExpiration", a.getDateExpiration()))
+                .orElse(Map.of("actif", false));
+    }
+
+    public Page<Podcast> listerPodcasts(Pageable pageable) {
+        return podcastRepository.findAll(pageable);
+    }
+
+    public List<Episode> listerEpisodes(Long podcastId) {
+        return episodeRepository.findByPodcastIdOrderByNumeroSaisonDescNumeroEpisodeDesc(podcastId);
+    }
+
+    /** Abonnement a une emission (section 6.4) : notification a la sortie d'un nouvel episode. */
+    public void abonnerPodcast(Long utilisateurId, Long podcastId) {
+        if (abonnementPodcastRepository.findByUtilisateurIdAndPodcastId(utilisateurId, podcastId).isPresent()) return;
+        podcastRepository.findById(podcastId).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Podcast introuvable."));
+        AbonnementPodcast abonnement = new AbonnementPodcast();
+        abonnement.setUtilisateurId(utilisateurId);
+        abonnement.setPodcastId(podcastId);
+        abonnementPodcastRepository.save(abonnement);
+    }
+}

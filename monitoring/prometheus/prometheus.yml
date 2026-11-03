@@ -12,12 +12,24 @@ alerting:
         - targets: ['alertmanager:9093']
 
 scrape_configs:
-  # L'application (compte, media, musique, live, votes, boutique, paiement regroupes) et la passerelle
+  # Les services Spring Boot (reseau Docker de l'application, via Actuator + Micrometer)
   - job_name: services
     metrics_path: /actuator/prometheus
     static_configs:
-      - targets: ['app-service:8080']
-        labels: {service: 'app'}
+      - targets: ['compte-service:8091']
+        labels: {service: 'compte'}
+      - targets: ['media-service:8082']
+        labels: {service: 'media'}
+      - targets: ['musique-service:8083']
+        labels: {service: 'musique'}
+      - targets: ['live-service:8084']
+        labels: {service: 'live'}
+      - targets: ['votes-service:8085']
+        labels: {service: 'votes'}
+      - targets: ['boutique-service:8086']
+        labels: {service: 'boutique'}
+      - targets: ['paiement-service:8087']
+        labels: {service: 'paiement'}
       - targets: ['gateway-service:8090']
         labels: {service: 'gateway'}
 

@@ -1,4 +1,4 @@
-# Arrete proprement les 4 processus Java du backend lances par start-tout.ps1
+# Arrete proprement les 10 processus Java du backend lances par start-tout.ps1
 # (l'app mobile/Expo s'arrete avec Ctrl+C dans son propre terminal).
 Set-Location -Path $PSScriptRoot
 
