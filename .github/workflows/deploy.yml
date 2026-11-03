@@ -1,0 +1,56 @@
+# Deploiement continu du backend sur le VPS, apres une CI reussie sur main.
+# Desactive par defaut : il faut creer la variable de depot DEPLOY_AUTO = true
+# (Settings > Secrets and variables > Actions > Variables) APRES le premier deploiement manuel v11/SQLite.
+# On peut aussi le lancer a la main : onglet Actions > Deploiement > Run workflow.
+name: Deploiement
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: deploiement-production
+  cancel-in-progress: false
+permissions:
+  contents: read
+
+jobs:
+  deployer:
+    name: Deployer sur le VPS
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && vars.DEPLOY_AUTO == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: production
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      PUBLIC_URL: ${{ vars.PUBLIC_URL || 'https://76-13-37-17.nip.io' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Connexion SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${{ secrets.VPS_PORT || 22 }}" -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          printf 'Host vps\n  HostName %s\n  User %s\n  Port %s\n  ServerAliveInterval 30\n' \
+            "${{ secrets.VPS_HOST }}" "${{ secrets.VPS_USER }}" "${{ secrets.VPS_PORT || 22 }}" > ~/.ssh/config
+
+      - name: Envoi du code (sans secrets, sans frontend)
+        run: |
+          # docker-compose.yml et deploiement/ restent ceux du serveur (certificats, reglages du proxy).
+          tar czf - --exclude=.git --exclude=.github --exclude=mobile-app --exclude=node_modules \
+            --exclude='*/target' --exclude=.env --exclude=.env.production --exclude=ajouter-cles-serveur.sh \
+            --exclude=./docker-compose.yml --exclude=./deploiement . \
+          | ssh vps 'rm -rf /opt/incoming && mkdir -p /opt/incoming && tar xzf - -C /opt/incoming'
+
+      - name: Deploiement (compilation, images, healthchecks, tests, retour auto si echec)
+        run: ssh vps "cd /opt/incoming && bash devops/deployer-ci.sh $SHA"
+
+      - name: Tests de fumee depuis l'exterieur
+        run: BASE_URL="$PUBLIC_URL" RETRIES=3 DELAY=20 bash devops/tests-fumee.sh

@@ -1,0 +1,27 @@
+# Surveillance externe : GitHub teste le site toutes les 15 minutes, meme si le VPS est completement
+# eteint (la surveillance locale du VPS ne pourrait pas prevenir dans ce cas).
+# Un echec = un e-mail de GitHub sur votre adresse.
+name: Surveillance
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+
+jobs:
+  site:
+    runs-on: ubuntu-latest
+    env:
+      URL: ${{ vars.PUBLIC_URL || 'https://76-13-37-17.nip.io' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tests de fumee
+        run: BASE_URL="$URL" RETRIES=3 DELAY=20 bash devops/tests-fumee.sh
+      - name: Certificat HTTPS (alerte si moins de 14 jours)
+        run: |
+          HOTE=${URL#https://}; HOTE=${HOTE%%/*}
+          FIN=$(echo | openssl s_client -servername "$HOTE" -connect "$HOTE:443" 2>/dev/null | openssl x509 -noout -enddate | cut -d= -f2)
+          J=$(( ( $(date -d "$FIN" +%s) - $(date +%s) ) / 86400 ))
+          echo "Certificat valide encore $J jours (fin : $FIN)"
+          [ "$J" -ge 14 ] || { echo "::error::Certificat HTTPS expire dans $J jours"; exit 1; }
