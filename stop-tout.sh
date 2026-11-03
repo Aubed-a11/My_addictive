@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Arrete proprement les 10 processus Java du backend lances par start-tout.sh
+# Arrete proprement les 4 processus Java du backend lances par start-tout.sh
 # (l'app mobile/Expo s'arrete avec Ctrl+C dans son propre terminal).
 set -uo pipefail
 cd "$(dirname "$0")"

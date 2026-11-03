@@ -93,9 +93,9 @@ jobs:
           cache: maven
       - name: Jars
         run: mvn -B -ntp -q -DskipTests package
-      - name: Images des microservices
+      - name: Images (application, passerelle, decouverte)
         run: |
-          for s in discovery-service gateway-service compte-service media-service musique-service live-service votes-service boutique-service paiement-service; do
+          for s in discovery-service gateway-service app-service; do
             docker build -t myaddictive/$s:ci $s
           done
           # config-service : contexte = racine (il embarque config-repo/)

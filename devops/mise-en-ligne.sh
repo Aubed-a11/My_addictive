@@ -19,6 +19,13 @@ done
 free -m | awk '/Mem:/ {if ($7<1500) print "[ATTENTION] memoire disponible faible ("$7" Mo) : la compilation peut echouer."}'
 df -m /opt | awk 'NR==2 && $4<3000 {print "[ATTENTION] moins de 3 Go libres sur /opt."}'
 
+# Volumes de donnees attendus par l'application (crees par l'ancien deploiement)
+VOLUMES_EXISTANTS=$(docker volume ls --format '{{.Name}}')
+for v in data_db data_compte; do
+  grep -qE "(^|_)${v}\$" <<<"$VOLUMES_EXISTANTS" || echo "[ATTENTION] volume Docker '$v' introuvable : il sera cree VIDE (photos de profil / fichiers medias deja envoyes absents)."
+done
+
+[ -d "$APP/media-service/uploads" ] || echo "[ATTENTION] $APP/media-service/uploads introuvable : les fichiers medias (pochettes, titres) seront absents."
 chmod +x "$INCOMING"/devops/*.sh
 bash "$INCOMING/devops/deployer-ci.sh" "mise-en-ligne-$(date +%Y%m%d%H%M)"
 

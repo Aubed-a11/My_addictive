@@ -60,63 +60,15 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
   - package-ecosystem: docker
-    directory: "/compte-service"
-    schedule:
-      interval: monthly
-    open-pull-requests-limit: 2
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-  - package-ecosystem: docker
-    directory: "/media-service"
-    schedule:
-      interval: monthly
-    open-pull-requests-limit: 2
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-  - package-ecosystem: docker
-    directory: "/musique-service"
-    schedule:
-      interval: monthly
-    open-pull-requests-limit: 2
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-  - package-ecosystem: docker
-    directory: "/live-service"
-    schedule:
-      interval: monthly
-    open-pull-requests-limit: 2
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-  - package-ecosystem: docker
-    directory: "/votes-service"
-    schedule:
-      interval: monthly
-    open-pull-requests-limit: 2
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-  - package-ecosystem: docker
-    directory: "/boutique-service"
-    schedule:
-      interval: monthly
-    open-pull-requests-limit: 2
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-  - package-ecosystem: docker
-    directory: "/paiement-service"
-    schedule:
-      interval: monthly
-    open-pull-requests-limit: 2
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-  - package-ecosystem: docker
     directory: "/admin-dashboard"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: docker
+    directory: "/app-service"
     schedule:
       interval: monthly
     open-pull-requests-limit: 2
