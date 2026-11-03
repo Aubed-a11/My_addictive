@@ -2,7 +2,7 @@
 # contexte de build (voir docker-compose.yml : build.context=. et
 # build.dockerfile=config-service/Dockerfile), pas config-service/ seul,
 # car il a besoin d'embarquer le dossier config-repo/ (sibling, pas enfant).
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 COPY config-service/target/*.jar app.jar
 # config-service lit sa configuration native depuis ce dossier (voir
