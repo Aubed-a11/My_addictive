@@ -29,6 +29,8 @@
     <spring-boot.version>3.2.5</spring-boot.version>
     <spring-cloud.version>2023.0.1</spring-cloud.version>
     <jjwt.version>0.12.5</jjwt.version>
+    <sqlite-jdbc.version>3.45.3.0</sqlite-jdbc.version>
+    <hibernate-community.version>6.4.4.Final</hibernate-community.version>
   </properties>
 
   <modules>
@@ -64,6 +66,19 @@
   </dependencyManagement>
 
   <build>
+    <plugins>
+      <!-- Force -parameters pour tous les modules, quelle que soit la version de Maven
+           installee sur le serveur (la simple propriete maven.compiler.parameters est
+           ignoree par les anciens plugins compilateur : @RequestParam sans nom => erreur 500). -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+        <configuration>
+          <parameters>true</parameters>
+        </configuration>
+      </plugin>
+    </plugins>
     <pluginManagement>
       <plugins>
         <plugin>

@@ -1,15 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Download, Check, Trash2 } from 'lucide-react-native';
 import client from '../../api/client';
 import { payerAvecKkiapay } from '../../utils/paiementKkiapay';
 import PrimaryButton from '../../components/PrimaryButton';
+import LienVideo from '../../components/LienVideo';
 import TextField from '../../components/TextField';
 import MessageErreur from '../../components/MessageErreur';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../theme/colors';
-import * as HorsLigne from '../../services/telechargementsHorsLigne';
 import { resoudreUrlImage } from '../../utils/urlImage';
 import IconePlaceholder from '../../components/IconePlaceholder';
 import EnteteLogo from '../../components/EnteteLogo';
@@ -27,8 +26,6 @@ const MOBILE_MONEY = ['MTN_MOMO', 'MOOV_MONEY', 'CELTIIS_CASH'];
  * Regle de gestion (section 5.2) : un paiement echoue n'emet aucun titre ;
  * on initie le paiement puis on interroge le statut de la transaction
  * jusqu'a confirmation (en mode simulation, la confirmation est immediate).
- * Le mode hors ligne (telechargement local) n'est propose que pour les
- * titres gratuits ou deja achetes.
  */
 export default function TitreDetailScreen({ navigation, route }) {
   const { id } = route.params;
@@ -39,9 +36,6 @@ export default function TitreDetailScreen({ navigation, route }) {
   const [dejaAchete, setDejaAchete] = useState(false);
   const [erreur, setErreur] = useState(null);
   const [message, setMessage] = useState(null);
-  const [dejaTelecharge, setDejaTelecharge] = useState(false);
-  const [telechargementEnCours, setTelechargementEnCours] = useState(false);
-  const [progression, setProgression] = useState(0);
   const [moyenPaiement, setMoyenPaiement] = useState('KKIAPAY');
   const [telephonePayeur, setTelephonePayeur] = useState(TELEPHONE_TEST_SANDBOX);
 
@@ -50,7 +44,6 @@ export default function TitreDetailScreen({ navigation, route }) {
       const { data } = await client.get(`/api/musique/titres/${id}`);
       setTitre(data);
       setChargement(false);
-      setDejaTelecharge(await HorsLigne.estTelecharge(id));
 
       if (estConnecte && !data.gratuit) {
         try {
@@ -60,10 +53,6 @@ export default function TitreDetailScreen({ navigation, route }) {
       }
     })();
   }, [id, estConnecte]);
-
-  const ecouter = () => {
-    navigation.navigate('Lecteur', { id });
-  };
 
   const acheter = async () => {
     if (!estConnecte) {
@@ -112,29 +101,8 @@ export default function TitreDetailScreen({ navigation, route }) {
     }
   };
 
-  const telechargerHorsLigne = async () => {
-    setErreur(null);
-    setTelechargementEnCours(true);
-    try {
-      await HorsLigne.telecharger(titre, setProgression);
-      setDejaTelecharge(true);
-    } catch (e) {
-      setErreur("Échec du telechargement : " + e.message);
-    } finally {
-      setTelechargementEnCours(false);
-      setProgression(0);
-    }
-  };
-
-  const supprimerHorsLigne = async () => {
-    await HorsLigne.supprimerTelechargement(id);
-    setDejaTelecharge(false);
-  };
-
   if (chargement) return <ActivityIndicator color={COLORS.musique} style={{ marginTop: 40 }} />;
   if (!titre) return null;
-
-  const peutTelecharger = titre.gratuit || dejaAchete;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -148,10 +116,7 @@ export default function TitreDetailScreen({ navigation, route }) {
         <Text style={styles.titre}>{titre.nom}</Text>
         <Text style={styles.artiste}>{titre.artiste}</Text>
         <Text style={styles.meta}>
-          {[
-            titre.compteurEcoutes > 0 ? `${titre.compteurEcoutes} écoutes` : null,
-            titre.compteurTelechargements > 0 ? `${titre.compteurTelechargements} téléchargements` : null,
-          ].filter(Boolean).join(' · ') || 'Pas encore d\'écoute enregistrée'}
+          {[titre.genre ? formaterGenre(titre.genre) : null, titre.gratuit ? 'Gratuit' : `${titre.prixFcfa} FCFA`].filter(Boolean).join(' · ')}
         </Text>
         <Text style={styles.description}>
           {titre.description
@@ -162,7 +127,7 @@ export default function TitreDetailScreen({ navigation, route }) {
         <MessageErreur message={erreur} />
         {message && <Text style={styles.message}>{message}</Text>}
 
-        <PrimaryButton titre="Ecouter" onPress={ecouter} couleur={COLORS.musique} />
+        <LienVideo url={titre.youtubeUrl} libelle="Voir le clip" messageAbsent="" couleur={COLORS.musique} />
 
         {!titre.gratuit && !dejaAchete && (
           <>
@@ -201,31 +166,6 @@ export default function TitreDetailScreen({ navigation, route }) {
           </>
         )}
 
-        {peutTelecharger && (
-          <View style={styles.carteHorsLigne}>
-            {dejaTelecharge ? (
-              <View style={styles.ligneHorsLigne}>
-                <View style={styles.ligneGauche}>
-                  <Check color={COLORS.musique} size={18} />
-                  <Text style={styles.texteHorsLigne}>Disponible hors ligne</Text>
-                </View>
-                <Trash2 color={COLORS.texteAtténué} size={18} onPress={supprimerHorsLigne} />
-              </View>
-            ) : (
-              <View style={styles.ligneHorsLigne}>
-                <View style={styles.ligneGauche}>
-                  <Download color={COLORS.texteAtténué} size={18} />
-                  <Text style={styles.texteHorsLigne}>
-                    {telechargementEnCours ? `Telechargement... ${Math.round(progression * 100)}%` : 'Telecharger pour ecoute hors ligne'}
-                  </Text>
-                </View>
-                {!telechargementEnCours && (
-                  <Text style={styles.lienTelecharger} onPress={telechargerHorsLigne}>Telecharger</Text>
-                )}
-              </View>
-            )}
-          </View>
-        )}
       </View>
     <BottomTabBar navigation={navigation} variante="musique" ongletActif="rubrique" />
       </SafeAreaView>
@@ -245,9 +185,5 @@ const styles = StyleSheet.create({
   moyenPaiement: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: COLORS.bordure, backgroundColor: COLORS.fondCarte },
   moyenPaiementTexte: { color: COLORS.texteAtténué, fontSize: 12, fontWeight: '600' },
   avertissementAgence: { color: COLORS.or, fontSize: 11, marginBottom: 10, lineHeight: 16 },
-  carteHorsLigne: { backgroundColor: COLORS.fondCarte, borderRadius: 12, padding: 14, marginTop: 14 },
-  ligneHorsLigne: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   ligneGauche: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  texteHorsLigne: { color: '#fff', fontSize: 13 },
-  lienTelecharger: { color: COLORS.musique, fontWeight: '700', fontSize: 13 },
 });

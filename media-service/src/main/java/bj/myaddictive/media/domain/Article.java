@@ -17,8 +17,7 @@ public class Article {
     @Column(name = "chapo")
     private String chapo;
 
-    @Lob
-    @Column(name = "contenu")
+    @Column(name = "contenu", columnDefinition = "TEXT")
     private String contenu;
 
     @Column(name = "image_url")

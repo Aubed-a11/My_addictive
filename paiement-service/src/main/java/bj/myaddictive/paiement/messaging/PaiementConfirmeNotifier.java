@@ -37,8 +37,8 @@ public class PaiementConfirmeNotifier {
         this.webClientBuilder = webClientBuilder;
     }
 
-    public void notifier(Transaction transaction) {
-        envoyer(transaction, "/api/interne/paiement-confirme");
+    public boolean notifier(Transaction transaction) {
+        return envoyer(transaction, "/api/interne/paiement-confirme");
     }
 
     /**
@@ -49,15 +49,16 @@ public class PaiementConfirmeNotifier {
      * services qui n'implementent pas cet endpoint (rien a restaurer)
      * recoivent simplement un 404 sans consequence, deja gere ci-dessous.
      */
-    public void notifierEchec(Transaction transaction) {
-        envoyer(transaction, "/api/interne/paiement-echoue");
+    public boolean notifierEchec(Transaction transaction) {
+        return envoyer(transaction, "/api/interne/paiement-echoue");
     }
 
-    private void envoyer(Transaction transaction, String chemin) {
+    /** @return true si le service cible a bien recu la notification (ou s'il n'y a rien a notifier). */
+    private boolean envoyer(Transaction transaction, String chemin) {
         String service = resoudreService(transaction.getTypeObjet());
         if (service == null) {
             log.warn("Aucun service cible connu pour le type d'objet {}, notification ignoree.", transaction.getTypeObjet());
-            return;
+            return true;
         }
 
         Map<String, Object> corps = Map.of(
@@ -76,11 +77,13 @@ public class PaiementConfirmeNotifier {
                     .toBodilessEntity()
                     .block();
             log.info("Service {} notifie ({}) pour la transaction {} ({}).", service, chemin, transaction.getId(), transaction.getTypeObjet());
+            return true;
         } catch (Exception e) {
             // En mode local sans file d'attente, un service cible indisponible perd la
             // notification (pas de re-livraison automatique). Acceptable pour un usage
             // de developpement/demo ; a durcir (retry, DLQ) avant une mise en production.
             log.error("Echec de la notification du service {} ({}) pour la transaction {} : {}", service, chemin, transaction.getId(), e.getMessage());
+            return false;
         }
     }
 

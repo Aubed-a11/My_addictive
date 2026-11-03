@@ -13,7 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../theme/colors';
 import { resoudreUrlImage } from '../../utils/urlImage';
 import IconePlaceholder from '../../components/IconePlaceholder';
-import LecteurVideo from '../../components/LecteurVideo';
+import LienVideo from '../../components/LienVideo';
 import EnteteLogo from '../../components/EnteteLogo';
 import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabBar';
 import { TELEPHONE_TEST_SANDBOX } from '../../utils/paiementKkiapay';
@@ -217,8 +217,8 @@ export default function EvenementDetailScreen({ navigation, route }) {
         </Text>
         {evenement.description && <Text style={styles.description}>{evenement.description}</Text>}
 
-        {evenement.statut === 'EN_DIRECT' && <LecteurVideo url={evenement.urlFlux} enDirect />}
-        {evenement.statut === 'REPLAY' && <LecteurVideo url={evenement.urlReplay} />}
+        {evenement.statut === 'EN_DIRECT' && <LienVideo url={evenement.urlFlux} libelle="Regarder le direct" messageAbsent="Le direct n'est pas encore disponible." couleur="#EF4444" />}
+        {evenement.statut === 'REPLAY' && <LienVideo url={evenement.urlReplay} libelle="Voir le replay" messageAbsent="Le replay n'est pas encore disponible." />}
 
         <MessageErreur message={erreur} />
         {message && <Text style={styles.message}>{message}</Text>}

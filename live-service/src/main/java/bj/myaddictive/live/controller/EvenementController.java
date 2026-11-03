@@ -34,15 +34,27 @@ public class EvenementController {
     }
 
     @GetMapping("/evenements")
-    public ResponseEntity<Page<Evenement>> lister(@RequestParam(required = false) StatutEvenement statut, Pageable pageable) {
-        return ResponseEntity.ok(liveService.listerEvenements(statut, pageable));
+    public ResponseEntity<Page<Evenement>> lister(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-User-Role", required = false) String role,
+            @RequestParam(required = false) StatutEvenement statut, Pageable pageable) {
+        Page<Evenement> page = liveService.listerEvenements(statut, pageable);
+        Long utilisateurId = userId == null ? null : Long.valueOf(userId);
+        // Les liens de diffusion/replay des evenements payants ne doivent jamais sortir dans la liste sans billet
+        // (l'administrateur les garde : le back-office les renvoie a l'enregistrement).
+        if (!"ADMINISTRATEUR".equals(role)) {
+            page.getContent().forEach(e -> liveService.masquerFluxSiNonAutorise(e, utilisateurId));
+        }
+        return ResponseEntity.ok(page);
     }
 
     @GetMapping("/evenements/{id}")
     public ResponseEntity<Evenement> obtenir(
             @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-User-Role", required = false) String role,
             @PathVariable Long id) {
         Evenement evenement = liveService.obtenirEvenement(id);
+        if ("ADMINISTRATEUR".equals(role)) return ResponseEntity.ok(evenement);
         return ResponseEntity.ok(liveService.masquerFluxSiNonAutorise(evenement, userId == null ? null : Long.valueOf(userId)));
     }
 

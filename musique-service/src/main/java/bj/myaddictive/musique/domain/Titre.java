@@ -51,8 +51,6 @@ public class Titre {
     @Column(name = "compteur_ecoutes", nullable = false)
     private Long compteurEcoutes = 0L;
 
-    @Column(name = "compteur_telechargements", nullable = false)
-    private Long compteurTelechargements = 0L;
 
     @Column(name = "youtube_url")
     private String youtubeUrl; // clip officiel, pour la section "Brand New" (accueil Musique)
@@ -89,8 +87,6 @@ public class Titre {
     public void setPrixFcfa(Long prixFcfa) { this.prixFcfa = prixFcfa; }
     public Long getCompteurEcoutes() { return compteurEcoutes; }
     public void setCompteurEcoutes(Long compteurEcoutes) { this.compteurEcoutes = compteurEcoutes; }
-    public Long getCompteurTelechargements() { return compteurTelechargements; }
-    public void setCompteurTelechargements(Long compteurTelechargements) { this.compteurTelechargements = compteurTelechargements; }
     public String getYoutubeUrl() { return youtubeUrl; }
     public void setYoutubeUrl(String youtubeUrl) { this.youtubeUrl = youtubeUrl; }
     public String getDescription() { return description; }

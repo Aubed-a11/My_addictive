@@ -1,5 +1,6 @@
 import 'react-native-gesture-handler'; // DOIT etre le tout premier import : requis par React Navigation.
 import './src/utils/alerteWeb'; // Alert.alert fonctionnel sur le web (sinon silencieux)
+import { initSentry } from './src/utils/sentry'; // supervision des erreurs web (Sentry), sans effet sans DSN
 import React, { useCallback, useEffect } from 'react';
 import { View, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -14,6 +15,7 @@ import RootNavigator from './src/navigation/RootNavigator';
 // police cursive du logo n'est pas chargee, pour eviter un flash visuel
 // ou "My" s'afficherait brievement dans une police par defaut.
 SplashScreenNatif.preventAutoHideAsync().catch(() => {});
+initSentry();
 
 /**
  * Sur le web, au-dela d'une certaine largeur d'ecran, une interface pensee

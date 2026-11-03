@@ -110,7 +110,6 @@ public class ImporteurLegacyMusique implements CommandLineRunner {
                 t.setGratuit(ligne.gratuit());
                 t.setPrixFcfa(ligne.gratuit() ? 0L : (ligne.prixFcfa() != null ? ligne.prixFcfa() : 0L));
                 t.setCompteurEcoutes(ligne.compteurEcoutes() != null ? ligne.compteurEcoutes() : 0L);
-                t.setCompteurTelechargements(ligne.compteurTelechargements() != null ? ligne.compteurTelechargements() : 0L);
                 if (ligne.indexAlbumLegacy() != null && ligne.indexAlbumLegacy() >= 0 && ligne.indexAlbumLegacy() < idsAlbumsCrees.size()) {
                     t.setAlbumId(idsAlbumsCrees.get(ligne.indexAlbumLegacy()));
                 }

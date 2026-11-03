@@ -59,7 +59,7 @@ public class MusiqueService {
         // d'une page (plusieurs milliers de titres ici), sans quoi un titre
         // recemment ajoute (donc pas forcement sur la premiere page) ne
         // serait jamais trouve par la recherche.
-        if (recherche != null && !recherche.isBlank()) page = titreRepository.findByNomContainingIgnoreCaseOrArtisteContainingIgnoreCase(recherche, recherche, pageable);
+        if (recherche != null && !recherche.isBlank()) page = rechercherTitres(recherche, pageable);
         else if (albumId != null) page = titreRepository.findByAlbumId(albumId, pageable);
         else if (artiste != null) page = titreRepository.findByArtiste(artiste, pageable);
         else if (gratuit != null && genre != null) page = titreRepository.findByGratuitAndGenreContaining(gratuit, genre, pageable);
@@ -70,6 +70,45 @@ public class MusiqueService {
         java.util.Set<Long> titresAchetes = utilisateurId == null ? java.util.Set.of()
                 : achatRepository.findByUtilisateurId(utilisateurId).stream().map(Achat::getTitreId).collect(java.util.stream.Collectors.toSet());
         return page.map(titre -> masquerSiNonAchete(titre, titresAchetes.contains(titre.getId())));
+    }
+
+    /** Minuscules + sans accents + ponctuation remplacee par des espaces. */
+    static String normaliserRecherche(String texte) {
+        if (texte == null) return "";
+        String sansAccents = java.text.Normalizer.normalize(texte, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
+        return sansAccents.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]+", " ").trim();
+    }
+
+    /**
+     * Recherche tolerante sur nom + artiste : insensible a la casse et aux accents,
+     * et chaque mot saisi doit etre trouve (dans le nom ou l'artiste), dans n'importe
+     * quel ordre ("karmelle vano" trouve l'artiste Karmelle + le titre Vano).
+     * Les titres dont le nom commence par la saisie passent en premier.
+     */
+    private Page<Titre> rechercherTitres(String recherche, Pageable pageable) {
+        String saisie = normaliserRecherche(recherche);
+        if (saisie.isEmpty()) return titreRepository.findAll(pageable);
+        String[] mots = saisie.split(" ");
+        java.util.List<Titre> trouves = new java.util.ArrayList<>();
+        java.util.Map<Long, Integer> score = new java.util.HashMap<>();
+        for (Titre t : titreRepository.findAll()) {
+            String nom = normaliserRecherche(t.getNom());
+            String artiste = normaliserRecherche(t.getArtiste());
+            String tout = nom + " " + artiste;
+            boolean tousLesMots = true;
+            for (String m : mots) { if (!tout.contains(m)) { tousLesMots = false; break; } }
+            if (!tousLesMots) continue;
+            int sc = nom.equals(saisie) ? 0 : nom.startsWith(saisie) ? 1 : artiste.startsWith(saisie) ? 2 : tout.contains(saisie) ? 3 : 4;
+            score.put(t.getId(), sc);
+            trouves.add(t);
+        }
+        trouves.sort(java.util.Comparator
+                .comparingInt((Titre t) -> score.getOrDefault(t.getId(), 4))
+                .thenComparing((Titre t) -> t.getCompteurEcoutes() == null ? 0L : t.getCompteurEcoutes(), java.util.Comparator.reverseOrder()));
+        int debut = (int) Math.min(pageable.getOffset(), trouves.size());
+        int fin = Math.min(debut + pageable.getPageSize(), trouves.size());
+        return new org.springframework.data.domain.PageImpl<>(new java.util.ArrayList<>(trouves.subList(debut, fin)), pageable, trouves.size());
     }
 
     private Titre masquerSiNonAchete(Titre titre, boolean possede) {
@@ -85,7 +124,6 @@ public class MusiqueService {
         copie.setGratuit(titre.isGratuit());
         copie.setAlbumId(titre.getAlbumId());
         copie.setCompteurEcoutes(titre.getCompteurEcoutes());
-        copie.setCompteurTelechargements(titre.getCompteurTelechargements());
         copie.setYoutubeUrl(titre.getYoutubeUrl());
         copie.setDescription(titre.getDescription());
         copie.setMisEnAvant(titre.isMisEnAvant());
@@ -212,18 +250,12 @@ public class MusiqueService {
     }
 
     /**
-     * Trois "Tops" bien distincts (section "Tous nos Tops") :
+     * Deux "Tops" distincts (section "Tous nos Tops") :
      * - streaming : nombre d'ecoutes, tous titres confondus
-     * - telechargement_gratuit : uniquement les titres gratuits, tries par
-     *   telechargements (n'a de sens que pour du contenu gratuit)
-     * - ventes : construit a partir des vrais achats enregistres (table
-     *   Achat), et non plus du meme compteur que les telechargements
-     *   gratuits comme c'etait le cas avant - un "Top Vente" et un "Top
-     *   Telechargement gratuit" identiques n'avait pas de sens.
+     * - ventes : construit a partir des vrais achats enregistres (table Achat)
      */
     public Page<Titre> classement(String type, Pageable pageable, Long utilisateurId) {
         Page<Titre> page = switch (type) {
-            case "telechargement_gratuit" -> titreRepository.classementTelechargementAvecMiseEnAvant(pageable);
             case "ventes" -> classementVentes(pageable);
             default -> titreRepository.classementStreamingAvecMiseEnAvant(pageable);
         };
@@ -257,6 +289,13 @@ public class MusiqueService {
         Titre titre = obtenirTitre(requete.titreId());
         if (titre.isGratuit()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Ce titre est deja gratuit, aucun paiement necessaire.");
+        }
+        if (titre.getPrixFcfa() == null || titre.getPrixFcfa() <= 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Le prix de ce titre n'est pas defini : achat impossible pour le moment.");
+        }
+        // Evite de faire payer deux fois le meme titre (double clic, deuxieme appareil...).
+        if (achatRepository.findByUtilisateurIdAndTitreId(Long.valueOf(userId), titre.getId()).isPresent()) {
+            throw new ApiException(HttpStatus.CONFLICT, "Vous possedez deja ce titre.");
         }
 
         Map<String, Object> corps = new java.util.HashMap<>(Map.of(

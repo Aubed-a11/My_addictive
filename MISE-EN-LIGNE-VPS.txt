@@ -1,0 +1,21 @@
+MISE EN LIGNE DU BACKEND SUR LE VPS (76.13.37.17)
+=================================================
+Contenu : les 9 services Spring Boot (backend uniquement), config-repo, devops/, monitoring/.
+Absent volontairement : mobile-app (Vercel), admin-dashboard (deja sur le serveur, non touche), docker-compose.yml de base, deploiement/ (nginx, certificats),
+.env.production et ajouter-cles-serveur.sh (secrets) : tout cela reste sur le serveur.
+
+1) Depuis votre PC (PowerShell), envoyer l'archive :
+     scp my-addictive-backend-vps-v13.zip root@76.13.37.17:/root/
+2) Sur le VPS :
+     ssh root@76.13.37.17
+     rm -rf /opt/incoming && mkdir -p /opt/incoming && cd /opt/incoming
+     unzip -oq /root/my-addictive-backend-vps-v13.zip
+     bash devops/mise-en-ligne.sh
+   (compter 10 a 20 minutes ; le script s'arrete et revient a la version precedente si un controle echoue)
+3) Premiere fois seulement, pour reprendre les anciennes donnees H2 :
+     bash /opt/myaddictive/migrer-vers-sqlite.sh
+4) Verifier : https://76-13-37-17.nip.io  (site 200)
+   Si une ligne [ERREUR] ou [ATTENTION] apparait, la copier telle quelle.
+5) Nettoyage : rm -f /opt/myaddictive/ajouter-cles-serveur.sh   puis changer le mot de passe e-mail.
+6) Option : bash /opt/myaddictive/devops/monitoring.sh up   (voir DEVOPS.md, ~1,2 Go de RAM)
+Retour arriere manuel : bash /opt/myaddictive/devops/rollback.sh

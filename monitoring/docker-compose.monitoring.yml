@@ -1,0 +1,115 @@
+# Supervision de My Addictive : metriques (Prometheus), tableaux de bord (Grafana), alertes (Alertmanager),
+# journaux (Loki + Promtail), disponibilite (Uptime Kuma), serveur (node-exporter) et conteneurs (cAdvisor).
+# Lancement : bash devops/monitoring.sh up      (ne pas lancer ce fichier directement)
+# Aucun port n'est ouvert sur Internet : tout est sur 127.0.0.1, on y accede par tunnel SSH (voir DEVOPS.md).
+# Memoire totale limitee a environ 1,1 Go ; si le VPS est petit, retirer cadvisor et uptime-kuma.
+
+networks:
+  mon: {}
+  app:
+    external: true
+    name: ${RESEAU_APP:?lancer via devops/monitoring.sh}
+
+volumes:
+  prom_data: {}
+  grafana_data: {}
+  loki_data: {}
+  kuma_data: {}
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prom_data:/prometheus
+    ports: ["127.0.0.1:9090:9090"]
+    networks: [mon, app]
+    mem_limit: 400m
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports: ["127.0.0.1:9093:9093"]
+    networks: [mon]
+    mem_limit: 64m
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?lancer via devops/monitoring.sh}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["127.0.0.1:3000:3000"]
+    networks: [mon]
+    mem_limit: 250m
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.0.0
+    command: ["-config.file=/etc/loki/loki.yml"]
+    volumes:
+      - ./loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+    networks: [mon]
+    mem_limit: 250m
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    command: ["-config.file=/etc/promtail/promtail.yml"]
+    volumes:
+      - ./promtail/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [mon]
+    mem_limit: 100m
+    restart: unless-stopped
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    volumes:
+      - kuma_data:/app/data
+    ports: ["127.0.0.1:3001:3001"]
+    networks: [mon, app]
+    mem_limit: 200m
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.1
+    command: ["--path.rootfs=/host"]
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    networks: [mon]
+    mem_limit: 50m
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    command: ["--docker_only=true", "--housekeeping_interval=30s"]
+    privileged: true
+    devices: ["/dev/kmsg"]
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks: [mon]
+    mem_limit: 150m
+    restart: unless-stopped

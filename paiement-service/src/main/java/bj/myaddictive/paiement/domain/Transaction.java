@@ -41,6 +41,15 @@ public class Transaction {
     @Column(name = "date_maj")
     private Instant dateMaj;
 
+    /**
+     * TRUE tant que le service metier (billet, titre, pieces, commande) n'a pas
+     * confirme avoir recu la notification de paiement reussi : permet de la
+     * renvoyer automatiquement si le service etait indisponible (redemarrage...).
+     * NULL pour les anciennes transactions : jamais renvoyees.
+     */
+    @Column(name = "notification_en_attente")
+    private Boolean notificationEnAttente;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getUtilisateurId() { return utilisateurId; }
@@ -61,4 +70,7 @@ public class Transaction {
     public void setDateCreation(Instant dateCreation) { this.dateCreation = dateCreation; }
     public Instant getDateMaj() { return dateMaj; }
     public void setDateMaj(Instant dateMaj) { this.dateMaj = dateMaj; }
+
+    public Boolean getNotificationEnAttente() { return notificationEnAttente; }
+    public void setNotificationEnAttente(Boolean notificationEnAttente) { this.notificationEnAttente = notificationEnAttente; }
 }

@@ -82,8 +82,33 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        // Ne jamais faire confiance a une identite fournie par le client : seule la
+        // gateway pose X-User-Id / X-User-Role, a partir d'un jeton verifie.
+        exchange = exchange.mutate().request(r -> r.headers(h -> {
+            h.remove("X-User-Id");
+            h.remove("X-User-Role");
+        })).build();
+
         String path = exchange.getRequest().getURI().getPath();
         String methode = exchange.getRequest().getMethod() != null ? exchange.getRequest().getMethod().name() : "GET";
+
+        // Appels reserves aux services internes (resolus via Eureka, sans passer par ici) :
+        //  - creation d'une transaction (le montant doit etre calcule par le service metier,
+        //    jamais choisi par le client) ;
+        //  - confirmation generique d'une transaction (/webhook/{id}) : sans signature, elle
+        //    permettrait a n'importe qui de declarer un paiement reussi sans payer.
+        // Les vrais webhooks (/webhooks/kkiapay, /webhooks/mtn-momo) restent accessibles.
+        boolean creationTransactionExterne = "POST".equals(methode)
+                && (path.endsWith("/api/paiement/transactions") || path.endsWith("/api/paiement/transactions/"));
+        boolean confirmationGeneriqueExterne = path.contains("/api/paiement/webhook/");
+        // /api/interne/** : endpoints entre services uniquement, jamais depuis l'exterieur.
+        boolean interneExterne = path.contains("/api/interne");
+        if (creationTransactionExterne || confirmationGeneriqueExterne || interneExterne) {
+            exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+            exchange.getResponse().getHeaders().add("Content-Type", "application/json");
+            byte[] bytes = "{\"error\":\"Operation reservee aux services internes.\"}".getBytes(StandardCharsets.UTF_8);
+            return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(bytes)));
+        }
 
         if (SUFFIXES_TOUJOURS_PUBLICS.stream().anyMatch(path::endsWith)) {
             return chain.filter(exchange);

@@ -1,0 +1,168 @@
+REDEPLOIEMENT EN 3 COMMANDES (tout est deja dans ce zip, cles comprises)
+===========================================================================
+Sur ton PC (frontend) : voir 1) plus bas.
+Sur le VPS (backend), apres  scp my-addictive-complet.zip root@76.13.37.17:/root/  :
+  cd /root && rm -rf my-addictive && unzip -oq my-addictive-complet.zip -x "my-addictive/mobile-app/*"
+  cp -r my-addictive/. /opt/myaddictive/
+  cd /opt/myaddictive && bash redeployer-tout.sh
+(redeployer-tout.sh ecrit les cles, ajoute les variables au docker-compose.yml,
+compile, reconstruit un service apres l'autre, relance et controle. ~20-30 min.)
+Puis : rm /opt/myaddictive/ajouter-cles-serveur.sh
+
+Details manuels ci-dessous (inutiles si tu lances redeployer-tout.sh).
+
+DEPLOIEMENT DE CETTE VERSION (09/10/2026) - My Addictive
+========================================================
+
+Ce zip contient le projet complet SAUF les fichiers propres au serveur, qu'il
+ne faut jamais ecraser : docker-compose.yml, deploiement/, nginx/, .env*,
+media-service/uploads, .git, target, node_modules.
+
+Contenu : paiements corriges (faille du webhook fermee, verification serveur
+KKiaPay, fan club en vrai paiement), connexion Google (Client ID deja integre),
+email reel, lecteur video, filtre des titres, telechargement hors ligne, splash 2 s.
+
+=== 1) APPLICATION (Vercel) =================================================
+Remplacer le dossier mobile-app de ton PC par celui du zip, puis, depuis la
+RACINE du projet (pas depuis mobile-app) :
+  git add -A
+  git commit -m "Paiements securises, connexion Google, lecteur video, correctifs"
+  git push
+Attendre le deploiement Vercel, puis vider le cache du navigateur
+(F12 > Application > Clear site data) et recharger deux fois.
+Le Client ID Google est deja dans le code : aucune variable a ajouter sur Vercel.
+
+=== 2) SERVEUR (VPS, en root) - une commande a la fois ======================
+  scp my-addictive-complet.zip root@76.13.37.17:/root/
+
+Sur le VPS :
+  cd /root && rm -rf my-addictive && unzip -oq my-addictive-complet.zip -x "my-addictive/mobile-app/*"
+  cp -r my-addictive/. /opt/myaddictive/
+  cd /opt/myaddictive
+
+Cles (email Gmail, KKiaPay) : elles sont deja dans le fichier ajouter-cles-serveur.sh
+de ce zip, qui est dans .gitignore (donc jamais envoye sur GitHub avec git add -A).
+  bash ajouter-cles-serveur.sh
+(il demande la cle PRIVEE KKiaPay tpr_..., a laisser vide si tu ne l'as pas)
+Puis, par securite : rm ajouter-cles-serveur.sh
+Ne JAMAIS retirer ce fichier du .gitignore : le depot GitHub est public.
+
+Lignes a ajouter dans docker-compose.yml (SEULEMENT si absentes) :
+ - bloc compte-service, sous ADMIN_MOT_DE_PASSE :
+     MAIL_USERNAME: ${MAIL_USERNAME:-}
+     MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+ - bloc paiement-service, sous KKIAPAY_SECRET_KEY (une seule commande) :
+     sed -i '/KKIAPAY_SECRET_KEY: /a\      KKIAPAY_WEBHOOK_SECRET: ${KKIAPAY_WEBHOOK_SECRET:-}\n      KKIAPAY_PUBLIC_KEY: ${KKIAPAY_PUBLIC_KEY:-}\n      KKIAPAY_PRIVATE_KEY: ${KKIAPAY_PRIVATE_KEY:-}\n      KKIAPAY_SANDBOX: ${KKIAPAY_SANDBOX:-true}\n      PAIEMENT_SIMULATION: ${PAIEMENT_SIMULATION:-false}' docker-compose.yml
+   Verifier : grep -n "KKIAPAY\|MAIL_" docker-compose.yml
+
+Compiler (4 services modifies) :
+  mvn -DskipTests clean package -pl compte-service,paiement-service,gateway-service,live-service
+
+Reconstruire, UN service apres l'autre (le VPS n'a qu'1 CPU) :
+  docker compose --env-file .env.production build config-service
+  docker compose --env-file .env.production build compte-service
+  docker compose --env-file .env.production build paiement-service
+  docker compose --env-file .env.production build gateway-service
+  docker compose --env-file .env.production build live-service
+  docker compose --env-file .env.production up -d
+Attendre ~5 minutes (inscription dans Eureka), puis :
+  docker compose --env-file .env.production restart proxy
+
+=== 3) CONFIGURER KKIAPAY ====================================================
+Dashboard KKiaPay > Developpeur > Cles API > Webhook :
+  URL : https://76-13-37-17.nip.io/api/paiement/webhooks/kkiapay
+  (le secret saisi la doit etre mis dans KKIAPAY_WEBHOOK_SECRET si different de la cle secrete)
+
+=== 4) VERIFIER ==============================================================
+  curl -s -o /dev/null -w "%{http_code}\n" -X POST https://76-13-37-17.nip.io/api/paiement/webhook/1 -H "Content-Type: application/json" -d '{"statut":"REUSSI"}'
+    -> doit afficher 403
+  Paiement : dans l'appli, choisir "Mobile Money / Carte (KKiaPay)" : le widget s'ouvre avec 61000000.
+  Google : bouton "Continuer avec Google" sur la page Connexion.
+  Logs : docker compose logs --tail=60 paiement-service | grep -i kkiapay
+
+=== 5) AUTRES POINTS ==========================================================
+  - Wayi au redemarrage du VPS : systemctl enable --now pm2-wayi
+  - Google en mode "Test" : seuls les comptes listes comme utilisateurs de test peuvent se connecter.
+    Pour tout le monde : console Google Cloud > Ecran de consentement > Publier l'application.
+  - NE JAMAIS ecrire de mot de passe ou de cle secrete dans ce depot (public).
+
+=== MISE A JOUR DU 01/11/2026 (correctifs de securite et de fiabilite des paiements) ===
+1. Faille corrigee : le gateway exposait aussi /<nom-du-service>/api/... (discovery locator), ce qui
+   contournait le blocage du webhook generique. Desactive + blocage de /api/interne renforce.
+2. Paiement reussi mais service metier indisponible (redemarrage) : la notification est maintenant
+   renvoyee automatiquement toutes les 20 s jusqu'a confirmation. Plus de billet/titre/pieces perdus.
+3. Pieces de vote et fan-club : une notification rejouee ne credite/prolonge plus deux fois.
+4. Vote : deux votes simultanes ne peuvent plus depenser la meme piece (verrou sur le portefeuille).
+Commande : cd /opt/myaddictive && bash redeployer-tout.sh   (duree ~15 min, garder la session ouverte :
+ssh -o ServerAliveInterval=30 root@76.13.37.17)
+
+=== COMPLEMENT (2e passe d'audit) ===
+5. Mot de passe oublie : le code a 6 chiffres n'avait pas de limite d'essais (prise de compte possible
+   par force brute). Maintenant : 5 essais maximum par code, un code par minute et par adresse.
+6. Envoi d'e-mail : delais maximum ajoutes (sinon la demande restait bloquee si Gmail ne repondait pas).
+7. Commande echouee : la restitution du stock est aussi renvoyee automatiquement si la boutique etait
+   indisponible (sinon le stock restait bloque).
+8. Photos de profil : desormais dans le volume persistant (elles etaient effacees a chaque redeploiement).
+9. Site publie : adresse du serveur et cle publique KKiaPay de secours si les variables Vercel manquent.
+
+=== COMPLEMENT (3e passe d'audit) ===
+10. Version web : Alert.alert ne faisait rien sur le web (erreurs invisibles) -> remplace par les boites du navigateur.
+11. 11 ecrans : une erreur reseau ne plante plus l'ecran ni ne laisse une erreur non geree.
+12. Achat de titre : refus si deja possede ; message clair si le prix n'est pas defini.
+13. Paiement KKiaPay : un double clic reutilise la transaction en attente au lieu d'en creer une nouvelle.
+
+=== COMPLEMENT (4e passe d'audit) ===
+14. /api/compte/{id}/public etait ouvert a tous et renvoyait l'email et le role : n'expose plus que nom et photo.
+15. Changement d'email depuis les parametres : format verifie, minuscules, refus si deja utilise.
+16. Votes : impossible de voter (et de depenser ses pieces) hors des phases de vote (inscriptions, terminee).
+17. Chat live : taille des messages, du nom et des reactions bornee ; messages vides ignores.
+
+=== COMPLEMENT (5e passe d'audit) ===
+18. Billets : la place est reservee 15 min des l'initiation du paiement -> plus de depassement de capacite
+    quand plusieurs personnes paient la derniere place ; message clair si le prix du billet n'est pas defini.
+19. Chat live : l'envoi par STOMP (nom d'auteur libre = usurpation possible) est supprime ; seul l'envoi
+    authentifie par l'API reste. L'app n'utilisait que celui-la.
+20. Comptes : un compte cree par mot de passe sans e-mail verifie voit son mot de passe invalide si le vrai
+    proprietaire se connecte ensuite avec Google (protection contre le pre-detournement). Il peut en
+    redefinir un via "mot de passe oublie".
+NON TRAITE : fichiers audio payants servis par adresse directe (necessite des liens signes + test en direct).
+
+=== COMPLEMENT (6e passe d'audit) ===
+21. FAILLE : la liste /api/live/evenements renvoyait le lien du live et du replay des evenements payants
+    en clair (regarder sans billet). Masque desormais, sauf pour l'administrateur et le createur.
+22. Boutique : les produits d'un vendeur suspendu ou refuse ne peuvent plus etre ajoutes au panier ni commandes.
+
+=== COMPLEMENT (7e passe d'audit) ===
+23. Lecteur video : les liens YouTube et Vimeo (direct, replay, articles, video des candidats) ne se lisaient pas
+    (page refusee dans un cadre / non lisible par le lecteur). Ils sont maintenant integres correctement.
+
+=== COMPLEMENT (8e passe d'audit) ===
+24. Demarrage de l'app : une valeur corrompue dans le stockage local bloquait l'app sur l'ecran d'accueil.
+25. Connexion : le jeton durait 2 h (deconnexion en pleine utilisation) -> 24 h (variable JWT_EXPIRATION_MINUTES).
+RAPPEL : ajouter-cles-serveur.sh contient vos cles ; le supprimer du serveur apres usage (rm).
+
+
+=== v11 : BASE UNIQUE SQLITE, SANS LECTEUR MEDIA NI TELECHARGEMENT ===
+1. Une seule base SQLite (fichier /app/shared-db/myaddictive.db dans le volume Docker data_db),
+   partagee par les 7 services avec base. Chaque service prefixe ses tables :
+   compte_*, media_*, musique_*, live_*, votes_*, boutique_*, paiement_*.
+   Mode WAL + busy_timeout 30 s + transaction_mode=IMMEDIATE pour les ecritures concurrentes.
+   Fichiers : docker-compose.override.yml (volume), config-repo/*.yml (datasource), PrefixedNamingStrategy.java
+   dans chaque service, pom.xml (sqlite-jdbc + hibernate-community-dialects).
+2. Deploiement : bash redeployer-tout.sh (cree la base et les tables), puis UNE FOIS
+   bash migrer-vers-sqlite.sh pour reprendre les anciennes donnees H2 (sauvegardes dans /opt/sauvegardes).
+3. Retour en arriere : les anciens volumes H2 ne sont pas supprimes ; redeployer le zip v10 les reutilise.
+4. Application : lecteur video integre supprime (boutons "Regarder le direct / replay / clip" qui ouvrent le lien),
+   telechargement de titres supprime (ecran Hors ligne, boutons, compteur, Top Telechargement gratuit).
+   L'ecoute en ligne des titres reste disponible.
+5. (v11b) Lecteur de musique supprime aussi : plus d'ecran d'ecoute, les titres s'affichent en fiche (genre, prix, achat, lien vers le clip YouTube s'il existe).
+
+=== v12 : DEVOPS COMPLET ===
+Voir DEVOPS.md : CI/CD GitHub Actions, healthchecks, surveillance, sauvegardes SQLite,
+renouvellement du certificat, retour arriere, Dependabot.
+Mise en place : cd /opt/myaddictive && bash devops/installer-exploitation.sh
+
+=== v13 : SUPERVISION ===
+Metriques /actuator/prometheus sur les 7 services + passerelle (micrometer-registry-prometheus).
+Pile monitoring/ : bash devops/monitoring.sh up  (Prometheus, Alertmanager, Grafana, Loki, Promtail, Uptime Kuma).
+Sentry dans les 2 fronts (DSN a renseigner). Voir DEVOPS.md.

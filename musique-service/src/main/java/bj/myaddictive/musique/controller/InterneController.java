@@ -53,10 +53,6 @@ public class InterneController {
         achat.setTransactionId(transactionId);
         achatRepository.save(achat);
 
-        titreRepository.findById(titreId).ifPresent(titre -> {
-            titre.setCompteurTelechargements(titre.getCompteurTelechargements() + 1);
-            titreRepository.save(titre);
-        });
         log.info("Titre {} debloque pour l'utilisateur {} (transaction {}).", titreId, utilisateurId, transactionId);
         return ResponseEntity.ok().build();
     }

@@ -34,6 +34,11 @@ public class AuthController {
         return ResponseEntity.ok(authService.connecter(requete));
     }
 
+    @PostMapping("/connexion-google")
+    public ResponseEntity<AuthResponse> connexionGoogle(@Valid @RequestBody ConnexionGoogleRequest requete) {
+        return ResponseEntity.ok(authService.connecterAvecGoogle(requete));
+    }
+
     @PostMapping("/mot-de-passe-oublie")
     public ResponseEntity<Map<String, String>> motDePasseOublie(@Valid @RequestBody MotDePasseOublieRequest requete) {
         authService.demanderReinitialisationMotDePasse(requete);

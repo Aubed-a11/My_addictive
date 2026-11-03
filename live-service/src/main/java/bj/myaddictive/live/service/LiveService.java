@@ -61,11 +61,18 @@ public class LiveService {
      * expose publiquement via la fiche detail de l'evenement (le lien de
      * diffusion en clair suffirait a regarder le live sans jamais payer).
      */
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
     public Evenement masquerFluxSiNonAutorise(Evenement evenement, Long utilisateurId) {
         if (!evenement.isPayant()) return evenement;
+        // Le createur de l'evenement garde ses liens (sinon, en modifiant son evenement, il les effacerait).
+        if (utilisateurId != null && utilisateurId.equals(evenement.getUtilisateurCreateurId())) return evenement;
         boolean possedeBillet = utilisateurId != null
                 && billetRepository.existsByUtilisateurIdAndEvenementIdAndStatutNot(utilisateurId, evenement.getId(), "ANNULE");
         if (possedeBillet) return evenement;
+        // Detache l'entite : le masquage ne doit jamais etre enregistre en base par un flush ulterieur.
+        if (entityManager != null && entityManager.contains(evenement)) entityManager.detach(evenement);
         evenement.setUrlFlux(null);
         evenement.setUrlReplay(null);
         return evenement;
@@ -141,13 +148,12 @@ public class LiveService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Cet evenement est termine, la billetterie est fermee.");
         }
         Integer capacite = requete.categorie() == CategorieBillet.VIP ? evenement.getCapaciteVip() : evenement.getCapaciteStandard();
-        if (capacite != null) {
-            long deja = billetRepository.countByEvenementIdAndCategorieAndStatutNot(requete.evenementId(), requete.categorie(), "ANNULE");
-            if (deja >= capacite) {
-                throw new ApiException(HttpStatus.CONFLICT, "Complet ! Il n'y a plus de place disponible dans cette categorie.");
-            }
-        }
         Long prix = requete.categorie() == CategorieBillet.VIP ? evenement.getPrixVipFcfa() : evenement.getPrixStandardFcfa();
+        if (prix == null || prix <= 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Le prix de ce billet n'est pas defini : achat impossible pour le moment.");
+        }
+        // La place est reservee des maintenant (15 min) : plusieurs personnes ne peuvent plus payer la derniere place en meme temps.
+        String cleReservation = reserverPlace(requete.evenementId(), requete.categorie(), capacite);
 
         Map<String, Object> corps = new java.util.HashMap<>(Map.of(
                 "moyenPaiement", requete.moyenPaiement(),
@@ -156,13 +162,54 @@ public class LiveService {
                 "referenceId", requete.evenementId() + ":" + requete.categorie().name()
         ));
         if (requete.telephonePayeur() != null) corps.put("telephonePayeur", requete.telephonePayeur());
-        return webClientBuilder.build().post()
-                .uri("http://paiement-service/api/paiement/transactions")
-                .header("X-User-Id", userId)
-                .bodyValue(corps)
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block();
+        Map<?, ?> transaction;
+        try {
+            transaction = webClientBuilder.build().post()
+                    .uri("http://paiement-service/api/paiement/transactions")
+                    .header("X-User-Id", userId)
+                    .bodyValue(corps)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+        } catch (RuntimeException e) {
+            reservations.remove(cleReservation); // le paiement n'a pas pu etre initie : la place est liberee
+            throw e;
+        }
+        if (transaction != null && transaction.get("id") != null) {
+            // Rattache la reservation a la transaction : elle sera liberee a la confirmation (le billet compte alors).
+            Reservation r = reservations.remove(cleReservation);
+            if (r != null) reservations.put("tx:" + transaction.get("id"), r);
+        }
+        @SuppressWarnings("unchecked")
+        Map<String, Object> resultat = (Map<String, Object>) transaction;
+        return resultat;
+    }
+
+    // --- Reservation temporaire des places pendant le paiement (en memoire : au pire, un redemarrage
+    // revient au comportement sans reservation, jamais a un refus a tort).
+    private static final long DUREE_RESERVATION_MS = 15 * 60_000L;
+    private record Reservation(Long evenementId, CategorieBillet categorie, long expiration) {}
+    private final java.util.concurrent.ConcurrentHashMap<String, Reservation> reservations = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private synchronized String reserverPlace(Long evenementId, CategorieBillet categorie, Integer capacite) {
+        long maintenant = System.currentTimeMillis();
+        reservations.values().removeIf(r -> r.expiration() < maintenant);
+        if (capacite != null) {
+            long prises = billetRepository.countByEvenementIdAndCategorieAndStatutNot(evenementId, categorie, "ANNULE");
+            long enCours = reservations.values().stream()
+                    .filter(r -> r.evenementId().equals(evenementId) && r.categorie() == categorie).count();
+            if (prises + enCours >= capacite) {
+                throw new ApiException(HttpStatus.CONFLICT, "Complet ! Il n'y a plus de place disponible dans cette categorie.");
+            }
+        }
+        String cle = "tmp:" + java.util.UUID.randomUUID();
+        reservations.put(cle, new Reservation(evenementId, categorie, maintenant + DUREE_RESERVATION_MS));
+        return cle;
+    }
+
+    /** Libere la reservation d'une transaction (appele une fois le billet cree : il compte alors dans les places prises). */
+    public void libererReservation(Long transactionId) {
+        reservations.remove("tx:" + transactionId);
     }
 
     /**
@@ -321,7 +368,7 @@ public class LiveService {
     }
 
     /** Cree l'abonnement ou le prolonge de 30 jours (appele apres confirmation du paiement). */
-    public void confirmerAbonnementFanClub(Long utilisateurId, Long chaineId) {
+    public void confirmerAbonnementFanClub(Long utilisateurId, Long chaineId, Long transactionId) {
         java.time.Instant maintenant = java.time.Instant.now();
         AbonnementFanClub abonnement = abonnementFanClubRepository.findByUtilisateurIdAndChaineId(utilisateurId, chaineId)
                 .orElseGet(() -> {
@@ -331,6 +378,10 @@ public class LiveService {
                     a.setDateExpiration(maintenant);
                     return a;
                 });
+        if (transactionId != null && transactionId.equals(abonnement.getDerniereTransactionId())) {
+            return; // notification deja appliquee (rejouee) : ne pas prolonger une seconde fois
+        }
+        abonnement.setDerniereTransactionId(transactionId);
         java.time.Instant base = abonnement.getDateExpiration().isAfter(maintenant) ? abonnement.getDateExpiration() : maintenant;
         abonnement.setDateExpiration(base.plus(30, java.time.temporal.ChronoUnit.DAYS));
         abonnementFanClubRepository.save(abonnement);

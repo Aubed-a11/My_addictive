@@ -26,6 +26,10 @@ public class MouvementPortefeuille {
     @Column(nullable = false)
     private String motif;
 
+    /** Transaction de paiement a l'origine du credit (idempotence : un credit n'est applique qu'une fois). Null pour les autres mouvements. */
+    @Column(name = "transaction_id")
+    private Long transactionId;
+
     @Column(name = "date_mouvement", nullable = false)
     private Instant dateMouvement = Instant.now();
 
@@ -37,6 +41,8 @@ public class MouvementPortefeuille {
     public void setMontant(Long montant) { this.montant = montant; }
     public String getMotif() { return motif; }
     public void setMotif(String motif) { this.motif = motif; }
+    public Long getTransactionId() { return transactionId; }
+    public void setTransactionId(Long transactionId) { this.transactionId = transactionId; }
     public Instant getDateMouvement() { return dateMouvement; }
     public void setDateMouvement(Instant dateMouvement) { this.dateMouvement = dateMouvement; }
 }

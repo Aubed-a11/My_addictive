@@ -135,9 +135,20 @@ public class BoutiqueService {
                 .toList();
     }
 
+    /** Un produit d'un vendeur suspendu ou refuse ne peut plus etre commande (les produits sans vendeur, ajoutes par l'administration, restent vendables). */
+    private void verifierVendeurActif(Produit produit) {
+        if (produit.getVendeurId() == null) return;
+        vendeurRepository.findById(produit.getVendeurId()).ifPresent(v -> {
+            if (v.getStatut() != StatutVendeur.VALIDE) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "\"" + produit.getNom() + "\" n'est plus disponible a la vente.");
+            }
+        });
+    }
+
     @Transactional
     public PanierItem ajouterAuPanier(Long utilisateurId, AjouterPanierRequest requete) {
         Produit produit = obtenirProduit(requete.produitId());
+        verifierVendeurActif(produit);
         if (produit.isDropLimite() && produit.getDateDebutDrop() != null && produit.getDateDebutDrop().isAfter(java.time.Instant.now())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Ce drop n'est pas encore en vente.");
         }
@@ -212,6 +223,7 @@ public class BoutiqueService {
 
         for (PanierItem item : items) {
             Produit produit = obtenirProduit(item.getProduitId());
+            verifierVendeurActif(produit);
             // Decrement atomique et conditionnel (voir ProduitRepository) : si 0 ligne
             // est affectee, soit le stock etait deja insuffisant, soit un autre achat
             // vient de prendre les derniers exemplaires a l'instant meme - dans les

@@ -66,4 +66,14 @@ public class Utilisateur {
     public void setActif(boolean actif) { this.actif = actif; }
     public Instant getDateCreation() { return dateCreation; }
     public void setDateCreation(Instant dateCreation) { this.dateCreation = dateCreation; }
+
+    /**
+     * TRUE quand la propriete de l'adresse e-mail est prouvee (connexion Google, ou code recu par e-mail).
+     * NULL/FALSE pour les comptes crees par mot de passe sans verification.
+     */
+    @Column(name = "email_verifie")
+    private Boolean emailVerifie;
+
+    public boolean isEmailVerifie() { return Boolean.TRUE.equals(emailVerifie); }
+    public void setEmailVerifie(boolean emailVerifie) { this.emailVerifie = emailVerifie; }
 }

@@ -1,6 +1,6 @@
 # Demarre TOUT en une seule commande, SANS DOCKER : compile les 10
 # microservices avec Maven, les lance directement en Java (bases de
-# donnees H2 embarquees, pas de Postgres/Redis/RabbitMQ/MinIO a installer),
+# base SQLite unique embarquee, pas de Postgres/Redis/RabbitMQ/MinIO a installer),
 # puis lance l'app mobile (Expo) avec detection automatique de l'IP locale.
 #
 # Usage (PowerShell) : .\start-tout.ps1
@@ -247,9 +247,12 @@ if ($jarsInvalides.Count -gt 0) {
 }
 Succes "Les 10 jars sont valides et executables."
 
-# ---------- 3. Lancement natif des services (H2 embarque, pas d'infra externe requise) ----------
+# ---------- 3. Lancement natif des services (SQLite embarque, pas d'infra externe requise) ----------
 New-Item -ItemType Directory -Force -Path "logs" | Out-Null
+New-Item -ItemType Directory -Force -Path "data" | Out-Null
 $racine = $PSScriptRoot
+# Base SQLite unique pour tous les services (en Docker : /app/shared-db/myaddictive.db, volume data_db)
+$env:APP_DB_PATH = "$racine\data\myaddictive.db"
 $script:pidsBackend = @()
 
 function Lancer-Service($nom) {

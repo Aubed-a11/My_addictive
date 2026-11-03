@@ -7,7 +7,7 @@ import { COLORS } from '../../theme/colors';
 
 const TUILES_HUB = [
   { titre: 'Media', sousTitre: 'Actualites & vidéos', Icone: Newspaper, couleur: COLORS.media },
-  { titre: 'Musique', sousTitre: 'Ecoutez & telechargez', Icone: Music, couleur: COLORS.musique },
+  { titre: 'Musique', sousTitre: 'Découvrez vos artistes', Icone: Music, couleur: COLORS.musique },
   { titre: 'Billetterie', sousTitre: 'Concerts & événements', Icone: Ticket, couleur: COLORS.billetterie },
   { titre: 'Livestream', sousTitre: 'Live & replays', Icone: Radio, couleur: COLORS.live },
   { titre: 'Votes', sousTitre: 'Soutenez vos favoris', Icone: TrendingUp, couleur: COLORS.votes },

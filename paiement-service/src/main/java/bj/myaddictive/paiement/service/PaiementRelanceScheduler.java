@@ -30,6 +30,32 @@ public class PaiementRelanceScheduler {
         this.paiementService = paiementService;
     }
 
+    /** Filet de securite KKiaPay : verifie aupres de KKiaPay les paiements lies mais non confirmes par webhook, et libere les abandonnes. */
+    @Scheduled(fixedDelay = 10_000)
+    public void relancerTransactionsKkiapay() {
+        try {
+            for (Transaction t : paiementService.transactionsKkiapayEnAttente()) {
+                paiementService.verifierAupresDeKkiapay(t);
+            }
+            paiementService.expirerAbandonnees();
+        } catch (Exception e) {
+            log.warn("Relance KKiaPay en erreur : {}", e.getMessage());
+        }
+    }
+
+    /** Renvoie les notifications de paiement reussi que le service metier n'a pas pu recevoir. */
+    @Scheduled(fixedDelay = 20_000, initialDelay = 60_000)
+    public void relancerNotificationsEnAttente() {
+        try {
+            // Un appel par transaction, via le proxy Spring : chacun a sa propre transaction (verrou en ecriture).
+            for (Long id : paiementService.notificationsEnAttente()) {
+                paiementService.relancerNotification(id);
+            }
+        } catch (Exception e) {
+            log.warn("Relance des notifications en erreur : {}", e.getMessage());
+        }
+    }
+
     @Scheduled(fixedDelay = 15_000) // toutes les 15 secondes : un paiement mobile money se confirme generalement en quelques dizaines de secondes
     public void relancerTransactionsEnAttente() {
         if (!paiementService.client().estConfigure()) return; // rien a interroger si l'integration reelle n'est pas active

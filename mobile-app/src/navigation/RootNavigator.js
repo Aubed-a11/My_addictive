@@ -18,14 +18,12 @@ import OffresPromotionScreen from '../screens/media/OffresPromotionScreen';
 
 import MusiqueHomeScreen from '../screens/musique/MusiqueHomeScreen';
 import TitreDetailScreen from '../screens/musique/TitreDetailScreen';
-import LecteurScreen from '../screens/musique/LecteurScreen';
 import AlbumsScreen from '../screens/musique/AlbumsScreen';
 import AlbumDetailScreen from '../screens/musique/AlbumDetailScreen';
 import GenresScreen from '../screens/musique/GenresScreen';
 import GenreTitresScreen from '../screens/musique/GenreTitresScreen';
 import ClassementMusiqueScreen from '../screens/musique/ClassementMusiqueScreen';
 import RecommandationsScreen from '../screens/musique/RecommandationsScreen';
-import MesTelechargementsScreen from '../screens/musique/MesTelechargementsScreen';
 import MesAchatsMusiqueScreen from '../screens/musique/MesAchatsMusiqueScreen';
 
 import EvenementsListeScreen from '../screens/live/EvenementsListeScreen';
@@ -92,14 +90,12 @@ export default function RootNavigator() {
 
         <Stack.Screen name="MusiqueHome" component={MusiqueHomeScreen} options={{ headerShown: false }} />
         <Stack.Screen name="TitreDetail" component={TitreDetailScreen} options={{ title: 'Titre' }} />
-        <Stack.Screen name="Lecteur" component={LecteurScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Albums" component={AlbumsScreen} options={{ title: 'Albums' }} />
         <Stack.Screen name="AlbumDetail" component={AlbumDetailScreen} options={{ title: 'Album' }} />
         <Stack.Screen name="Genres" component={GenresScreen} options={{ title: 'Nos Genres' }} />
         <Stack.Screen name="GenreTitres" component={GenreTitresScreen} options={{ title: 'Genre' }} />
         <Stack.Screen name="ClassementMusique" component={ClassementMusiqueScreen} options={{ title: 'Nos Top' }} />
         <Stack.Screen name="Recommandations" component={RecommandationsScreen} options={{ title: 'Pour vous' }} />
-        <Stack.Screen name="MesTelechargements" component={MesTelechargementsScreen} options={{ title: 'Hors ligne' }} />
         <Stack.Screen name="MesAchatsMusique" component={MesAchatsMusiqueScreen} options={{ title: 'Mes achats' }} />
 
         <Stack.Screen name="EvenementsListe" component={EvenementsListeScreen} options={{ headerShown: false }} />

@@ -3,6 +3,7 @@ package bj.myaddictive.paiement.service;
 import bj.myaddictive.paiement.domain.MoyenPaiement;
 import bj.myaddictive.paiement.domain.StatutTransaction;
 import bj.myaddictive.paiement.domain.Transaction;
+import bj.myaddictive.paiement.domain.TypeObjetPaiement;
 import bj.myaddictive.paiement.dto.InitierPaiementRequest;
 import bj.myaddictive.paiement.dto.WebhookRequest;
 import bj.myaddictive.paiement.exception.ApiException;
@@ -48,16 +49,25 @@ public class PaiementService {
     private final TransactionRepository transactionRepository;
     private final PaiementConfirmeNotifier notifier;
     private final MtnMomoClient mtnMomoClient;
+    private final KkiapayClient kkiapayClient;
+    private final boolean simulationAutorisee;
     private final String kkiapaySecret;
 
     public PaiementService(TransactionRepository transactionRepository,
                             PaiementConfirmeNotifier notifier,
                             MtnMomoClient mtnMomoClient,
-                            @org.springframework.beans.factory.annotation.Value("${mobile-money.kkiapay.secret-key:}") String kkiapaySecret) {
+                            KkiapayClient kkiapayClient,
+                            // Secret du webhook defini dans le dashboard KKiaPay ("hash secret") ;
+                            // a defaut, on reprend la cle secrete API (comportement historique).
+                            @org.springframework.beans.factory.annotation.Value("${mobile-money.kkiapay.webhook-secret:}") String kkiapayWebhookSecret,
+                            @org.springframework.beans.factory.annotation.Value("${mobile-money.kkiapay.secret-key:}") String kkiapaySecretApi,
+                            @org.springframework.beans.factory.annotation.Value("${paiement.simulation-autorisee:false}") boolean simulationAutorisee) {
+        this.simulationAutorisee = simulationAutorisee;
         this.transactionRepository = transactionRepository;
         this.notifier = notifier;
         this.mtnMomoClient = mtnMomoClient;
-        this.kkiapaySecret = kkiapaySecret;
+        this.kkiapayClient = kkiapayClient;
+        this.kkiapaySecret = kkiapayWebhookSecret.isBlank() ? kkiapaySecretApi : kkiapayWebhookSecret;
     }
 
     @Transactional
@@ -65,6 +75,29 @@ public class PaiementService {
         if (requete.moyenPaiement() == MoyenPaiement.MTN_MOMO && mtnMomoClient.estConfigure()
                 && (requete.telephonePayeur() == null || requete.telephonePayeur().isBlank())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Le numero de telephone Mobile Money est requis pour ce moyen de paiement.");
+        }
+
+        // Moyens sans integration reelle (Moov, Celtiis, carte directe, MTN non configure) :
+        // ils se "confirmaient" automatiquement, donc un achat gratuit. Refuses sauf si la
+        // simulation est explicitement activee (PAIEMENT_SIMULATION=true, developpement local).
+        boolean moyenReel = requete.moyenPaiement() == MoyenPaiement.KKIAPAY
+                || requete.moyenPaiement() == MoyenPaiement.AGENCE
+                || (requete.moyenPaiement() == MoyenPaiement.MTN_MOMO && mtnMomoClient.estConfigure());
+        if (!moyenReel && !simulationAutorisee) {
+            throw new ApiException(HttpStatus.BAD_REQUEST,
+                    "Ce moyen de paiement n'est pas encore disponible. Choisissez \"Mobile Money / Carte (KKiaPay)\".");
+        }
+
+        if (requete.moyenPaiement() == MoyenPaiement.KKIAPAY) {
+            // Double clic ou nouvelle tentative apres fermeture du widget : on reutilise la transaction
+            // encore vierge (pas liee a KKiaPay) plutot que d'en creer une nouvelle a chaque fois.
+            var existante = transactionRepository
+                    .findFirstByUtilisateurIdAndMoyenPaiementAndTypeObjetAndReferenceIdAndStatutAndIdTransactionExterneIsNullAndDateCreationAfterOrderByDateCreationDesc(
+                            utilisateurId, MoyenPaiement.KKIAPAY, requete.typeObjet(), requete.referenceId(),
+                            StatutTransaction.EN_ATTENTE, Instant.now().minusSeconds(600));
+            if (existante.isPresent() && existante.get().getMontantFcfa().equals(requete.montantFcfa())) {
+                return existante.get();
+            }
         }
 
         Transaction transaction = new Transaction();
@@ -139,7 +172,55 @@ public class PaiementService {
             return transaction; // deja traitee, rien a faire (idempotence)
         }
         transaction.setIdTransactionExterne(idTransactionExterne);
-        return transactionRepository.save(transaction);
+        transaction = transactionRepository.save(transaction);
+        // Verification serveur immediate aupres de KKiaPay : rattrape un webhook
+        // arrive AVANT cette liaison (ignore a l'epoque) ou jamais configure.
+        return verifierAupresDeKkiapay(transaction);
+    }
+
+    /**
+     * Interroge KKiaPay (cote serveur, avec nos cles privees) sur une transaction
+     * KKiaPay EN_ATTENTE deja liee, et la confirme / la rejette selon sa reponse.
+     * Un montant different de celui attendu n'est JAMAIS confirme.
+     */
+    @Transactional
+    public Transaction verifierAupresDeKkiapay(Transaction transaction) {
+        if (transaction.getMoyenPaiement() != MoyenPaiement.KKIAPAY
+                || transaction.getStatut() != StatutTransaction.EN_ATTENTE
+                || transaction.getIdTransactionExterne() == null
+                || !kkiapayClient.estConfigure()) {
+            return transaction;
+        }
+        var verification = kkiapayClient.verifier(transaction.getIdTransactionExterne());
+        if (verification.isEmpty()) return transaction;
+        var v = verification.get();
+        if (v.statut() == StatutTransaction.REUSSI && v.montantFcfa() != null
+                && !v.montantFcfa().equals(transaction.getMontantFcfa())) {
+            log.error("Montant KKiaPay ({}) different du montant attendu ({}) pour la transaction {} : NON confirmee.",
+                    v.montantFcfa(), transaction.getMontantFcfa(), transaction.getId());
+            return transaction;
+        }
+        return traiterWebhook(transaction.getId(), new WebhookRequest(v.statut(), transaction.getIdTransactionExterne()));
+    }
+
+    public List<Transaction> transactionsKkiapayEnAttente() {
+        return transactionRepository.findByStatutAndMoyenPaiement(StatutTransaction.EN_ATTENTE, MoyenPaiement.KKIAPAY);
+    }
+
+    /**
+     * Libere les transactions KKiaPay abandonnees (widget ferme avant tout paiement,
+     * donc jamais liees) apres 30 min : passe en ECHEC et previent le service metier,
+     * ce qui restitue notamment le stock reserve par une commande boutique.
+     */
+    @Transactional
+    public void expirerAbandonnees() {
+        Instant limite = Instant.now().minusSeconds(30 * 60);
+        for (Transaction t : transactionsKkiapayEnAttente()) {
+            if (t.getIdTransactionExterne() == null && t.getDateCreation().isBefore(limite)) {
+                log.info("Transaction KKiaPay {} abandonnee (non liee apres 30 min) : passee en ECHEC.", t.getId());
+                traiterWebhook(t.getId(), new WebhookRequest(StatutTransaction.ECHEC, null));
+            }
+        }
     }
 
     /**
@@ -163,7 +244,7 @@ public class PaiementService {
      */
     @Transactional
     public Transaction traiterWebhook(Long transactionId, WebhookRequest requete) {
-        Transaction transaction = transactionRepository.findById(transactionId)
+        Transaction transaction = transactionRepository.findByIdForUpdate(transactionId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Transaction introuvable."));
 
         if (transaction.getStatut() != StatutTransaction.EN_ATTENTE) {
@@ -176,18 +257,62 @@ public class PaiementService {
         if (requete.idTransactionExterne() != null) {
             transaction.setIdTransactionExterne(requete.idTransactionExterne());
         }
+        if (transaction.getStatut() == StatutTransaction.ECHEC && transaction.getTypeObjet() == TypeObjetPaiement.COMMANDE) {
+            // Seule la boutique doit etre prevenue d'un echec (restitution du stock reserve) :
+            // la notification est renvoyee tant qu'elle n'est pas recue.
+            transaction.setNotificationEnAttente(true);
+        }
+        if (transaction.getStatut() == StatutTransaction.REUSSI) {
+            // Reste "en attente de notification" tant que le service metier n'a pas confirme
+            // (voir relancerNotifications) : un redemarrage ne fait plus perdre un billet/titre paye.
+            transaction.setNotificationEnAttente(true);
+        }
         transaction = transactionRepository.save(transaction);
 
         if (transaction.getStatut() == StatutTransaction.REUSSI) {
-            notifier.notifier(transaction);
+            if (notifier.notifier(transaction)) {
+                transaction.setNotificationEnAttente(false);
+                transaction = transactionRepository.save(transaction);
+            }
         } else if (transaction.getStatut() == StatutTransaction.ECHEC) {
             // Necessaire notamment pour boutique-service, qui reserve le stock des
             // l'initiation de la commande (voir BoutiqueService.initierCommande) :
             // sans cette notification, un stock reserve pour une commande finalement
             // non payee resterait indisponible indefiniment.
-            notifier.notifierEchec(transaction);
+            if (transaction.getTypeObjet() == TypeObjetPaiement.COMMANDE) {
+                if (notifier.notifierEchec(transaction)) {
+                    transaction.setNotificationEnAttente(false);
+                    transaction = transactionRepository.save(transaction);
+                }
+            } else {
+                notifier.notifierEchec(transaction);
+            }
         }
         return transaction;
+    }
+
+    /**
+     * Renvoie les notifications de paiement reussi que le service metier n'a pas
+     * pu recevoir (indisponible, en cours de redemarrage...). Appelee periodiquement.
+     */
+    public List<Long> notificationsEnAttente() {
+        return transactionRepository.findByNotificationEnAttenteTrue().stream().map(Transaction::getId).toList();
+    }
+
+    @Transactional
+    public void relancerNotification(Long transactionId) {
+        transactionRepository.findByIdForUpdate(transactionId).ifPresent(t -> {
+            if (!Boolean.TRUE.equals(t.getNotificationEnAttente())) return;
+            boolean envoye;
+            if (t.getStatut() == StatutTransaction.REUSSI) envoye = notifier.notifier(t);
+            else if (t.getStatut() == StatutTransaction.ECHEC) envoye = notifier.notifierEchec(t);
+            else return;
+            if (envoye) {
+                t.setNotificationEnAttente(false);
+                transactionRepository.save(t);
+                log.info("Notification de la transaction {} renvoyee avec succes.", t.getId());
+            }
+        });
     }
 
     /** Traite un callback MTN MoMo recu via son identifiant de reference externe (pas l'id interne). */
@@ -219,6 +344,27 @@ public class PaiementService {
         String transactionIdExterne = String.valueOf(corps.get("transactionId"));
         boolean succes = Boolean.TRUE.equals(corps.get("isPaymentSucces"));
         try {
+            if (transactionRepository.findByIdTransactionExterne(transactionIdExterne).isEmpty()) {
+                // Pas encore liee : KKiaPay renvoie le partnerId (= notre id de transaction, passe a l'ouverture du widget).
+                Object partnerId = corps.get("partnerId");
+                if (partnerId != null && String.valueOf(partnerId).matches("\\d+")) {
+                    transactionRepository.findById(Long.valueOf(String.valueOf(partnerId)))
+                            .filter(t -> t.getMoyenPaiement() == MoyenPaiement.KKIAPAY && t.getStatut() == StatutTransaction.EN_ATTENTE)
+                            .ifPresent(t -> {
+                                t.setIdTransactionExterne(transactionIdExterne);
+                                transactionRepository.save(t);
+                            });
+                }
+            }
+            Object montantRecu = corps.get("amount");
+            if (succes && montantRecu instanceof Number n) {
+                var t = transactionRepository.findByIdTransactionExterne(transactionIdExterne);
+                if (t.isPresent() && t.get().getMontantFcfa() != n.longValue()) {
+                    log.error("Webhook KKiaPay : montant {} different du montant attendu {} (transaction {}), NON confirmee.",
+                            n, t.get().getMontantFcfa(), t.get().getId());
+                    return;
+                }
+            }
             traiterWebhookParReferenceExterne(transactionIdExterne, succes ? StatutTransaction.REUSSI : StatutTransaction.ECHEC);
         } catch (ApiException e) {
             // Transaction pas encore liee cote serveur (voir lierTransactionExterne)

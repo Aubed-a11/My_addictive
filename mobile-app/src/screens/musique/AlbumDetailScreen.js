@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Text, StyleSheet, FlatList, View, Pressable, Image, ImageBackground, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Play } from 'lucide-react-native';
+import { ChevronRight } from 'lucide-react-native';
 import client from '../../api/client';
 import { COLORS } from '../../theme/colors';
 import { resoudreUrlImage } from '../../utils/urlImage';
@@ -62,7 +62,7 @@ export default function AlbumDetailScreen({ navigation, route }) {
               <Text style={styles.nomTitre} numberOfLines={1}>{item.nom}</Text>
               {!item.gratuit && <Text style={styles.prixTitre}>{item.prixFcfa} FCFA</Text>}
             </View>
-            <Play color={COLORS.musique} size={18} />
+            <ChevronRight color={COLORS.musique} size={18} />
           </Pressable>
         )}
         ListEmptyComponent={<Text style={styles.vide}>Aucun titre associe a cet album pour le moment.</Text>}

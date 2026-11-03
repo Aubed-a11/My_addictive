@@ -61,7 +61,7 @@ public class ChaineController {
             @RequestBody(required = false) Map<String, String> corps) {
         if (userId == null) throw new ApiException(HttpStatus.UNAUTHORIZED, "Connexion requise.");
         Map<String, String> corpsSur = corps != null ? corps : Map.of();
-        String moyenPaiement = corpsSur.getOrDefault("moyenPaiement", "MTN_MOMO");
+        String moyenPaiement = corpsSur.getOrDefault("moyenPaiement", "KKIAPAY");
         return ResponseEntity.ok(liveService.initierAbonnementFanClub(userId, id, moyenPaiement, corpsSur.get("telephonePayeur")));
     }
 

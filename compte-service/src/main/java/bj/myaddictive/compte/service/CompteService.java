@@ -34,7 +34,17 @@ public class CompteService {
     public Utilisateur mettreAJourProfil(Long id, MettreAJourProfilRequest requete) {
         Utilisateur utilisateur = obtenirParId(id);
         if (requete.nomComplet() != null) utilisateur.setNomComplet(requete.nomComplet());
-        if (requete.email() != null) utilisateur.setEmail(requete.email());
+        if (requete.email() != null && !requete.email().isBlank()) {
+            // Meme normalisation qu'a l'inscription/connexion (minuscules), sinon la connexion echouerait ensuite.
+            String email = requete.email().trim().toLowerCase();
+            if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Adresse email invalide.");
+            }
+            if (!email.equals(utilisateur.getEmail()) && utilisateurRepository.existsByEmail(email)) {
+                throw new ApiException(HttpStatus.CONFLICT, "Un compte existe deja avec cet email.");
+            }
+            utilisateur.setEmail(email);
+        }
         if (requete.photoUrl() != null) utilisateur.setPhotoUrl(requete.photoUrl());
         return utilisateurRepository.save(utilisateur);
     }

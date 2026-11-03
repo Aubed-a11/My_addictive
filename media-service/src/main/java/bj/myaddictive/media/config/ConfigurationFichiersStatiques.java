@@ -16,7 +16,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  *
  * Le chemin par defaut ("./media-service/uploads/") est relatif a la RACINE
  * du projet, car start-tout.ps1/.sh lance tous les services avec la racine
- * comme repertoire de travail (meme convention que les bases H2). En
+ * comme repertoire de travail (meme convention que la base SQLite locale). En
  * conteneur Docker, chaque service tourne isole avec son propre systeme de
  * fichiers : app.uploads-path est alors surchargee (voir docker-compose.yml)
  * vers un simple "./uploads/" local au conteneur, monte en volume.

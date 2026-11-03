@@ -15,3 +15,9 @@ admin-dashboard/dist/
 # Secrets de production (voir DEPLOIEMENT.md)
 .env.production
 deploiement/certbot/
+
+# Fichier contenant des secrets (ne jamais pousser sur GitHub)
+ajouter-cles-serveur.sh
+
+# Genere par devops/monitoring.sh (contient le mot de passe e-mail) : jamais sur GitHub
+monitoring/alertmanager/alertmanager.yml

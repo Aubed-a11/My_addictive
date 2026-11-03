@@ -43,10 +43,15 @@ public class InterneController {
     @PostMapping("/paiement-confirme")
     @Transactional
     public ResponseEntity<Void> surPaiementConfirme(@RequestBody Map<String, Object> evenement) {
+        Long transactionId = Long.valueOf(String.valueOf(evenement.get("transactionId")));
+        if (mouvementPortefeuilleRepository.existsByTransactionId(transactionId)) {
+            log.info("Pieces deja creditees pour la transaction {}, appel ignore (idempotence).", transactionId);
+            return ResponseEntity.ok().build();
+        }
         Long utilisateurId = Long.valueOf(String.valueOf(evenement.get("utilisateurId")));
         long nombrePieces = Long.parseLong(String.valueOf(evenement.get("referenceId")));
 
-        Portefeuille portefeuille = portefeuilleRepository.findByUtilisateurId(utilisateurId)
+        Portefeuille portefeuille = portefeuilleRepository.findByUtilisateurIdForUpdate(utilisateurId)
                 .orElseGet(() -> {
                     Portefeuille p = new Portefeuille();
                     p.setUtilisateurId(utilisateurId);
@@ -60,6 +65,7 @@ public class InterneController {
         mouvement.setUtilisateurId(utilisateurId);
         mouvement.setMontant(nombrePieces);
         mouvement.setMotif("Achat de pieces");
+        mouvement.setTransactionId(transactionId);
         mouvementPortefeuilleRepository.save(mouvement);
 
         log.info("{} pieces creditees a l'utilisateur {}.", nombrePieces, utilisateurId);

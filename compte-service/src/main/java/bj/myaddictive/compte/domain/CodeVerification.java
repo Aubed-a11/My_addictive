@@ -27,6 +27,13 @@ public class CodeVerification {
     @Column(name = "date_creation", nullable = false)
     private Instant dateCreation = Instant.now();
 
+    /** Nombre de saisies incorrectes : au-dela de la limite, le code est invalide (anti force brute). Null pour les anciens codes. */
+    @Column(name = "tentatives")
+    private Integer tentatives = 0;
+
+    public int getTentatives() { return tentatives == null ? 0 : tentatives; }
+    public void setTentatives(int tentatives) { this.tentatives = tentatives; }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getEmail() { return email; }

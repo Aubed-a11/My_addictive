@@ -2,30 +2,69 @@ server:
   port: 8091
 spring:
   datasource:
-    # Renomme depuis compte_db (v1, schema par telephone) suite au passage a
-    # l'authentification par email : le mode ddl-auto=update ne gere pas de
-    # maniere fiable un changement de contrainte unique sur une base deja
-    # peuplee. Un nouveau fichier garantit un schema propre, sans dependre
-    # d'une suppression manuelle du dossier data/.
-    url: jdbc:h2:file:./data/compte_db_v2;AUTO_SERVER=TRUE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    # Base unique SQLite partagee par tous les services (volume Docker commun).
+    # Les tables de ce service sont prefixees "compte_" (voir PrefixedNamingStrategy).
+    # WAL + busy_timeout : plusieurs services peuvent ecrire dans le meme fichier ;
+    # transaction_mode=IMMEDIATE evite les erreurs de verrou lors d'une lecture
+    # suivie d'une ecriture dans la meme transaction.
+    url: jdbc:sqlite:${APP_DB_PATH:/app/shared-db/myaddictive.db}?journal_mode=WAL&busy_timeout=30000&transaction_mode=IMMEDIATE&synchronous=NORMAL
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 3
   jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
     hibernate:
       ddl-auto: update
+      naming:
+        physical-strategy: bj.myaddictive.compte.config.PrefixedNamingStrategy
     show-sql: false
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
   # Photo de profil (section 9.2) : limite raisonnable pour une photo de profil.
   servlet:
     multipart:
       max-file-size: 5MB
       max-request-size: 5MB
 
+  # Envoi reel des emails (code de reinitialisation de mot de passe) via un
+  # compte Gmail avec mot de passe d'application. Les identifiants ne sont
+  # JAMAIS ecrits ici (ce depot est public) : MAIL_USERNAME et MAIL_PASSWORD
+  # viennent de .env.production sur le serveur. Sans eux, l'envoi echoue
+  # proprement et le code reste consultable dans les logs du service.
+  mail:
+    host: smtp.gmail.com
+    port: 465
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          # Delais maximum : sans eux, un Gmail injoignable bloque la demande indefiniment.
+          connectiontimeout: 5000
+          timeout: 10000
+          writetimeout: 10000
+          ssl:
+            enable: true
+          socketFactory:
+            port: 465
+            class: javax.net.ssl.SSLSocketFactory
+
+# Identifiant client OAuth Google (console.cloud.google.com > Identifiants),
+# necessaire pour verifier les jetons de connexion "Se connecter avec
+# Google" cote serveur. Laisse vide, la connexion Google repond simplement
+# "pas encore configuree" plutot que d'echouer de maniere confuse.
+google:
+  client-id: ${GOOGLE_CLIENT_ID:302316778064-6gdvcltrt4na77ao05kjrec1kl3v6v7s.apps.googleusercontent.com}
+
 # Compte administrateur cree automatiquement au premier demarrage (voir AmorceAdministrateur).
 admin:
   email: ${ADMIN_EMAIL:admin@myaddictive.com}
   mot-de-passe: ${ADMIN_MOT_DE_PASSE:AdminAddictive2026!}
+
+# Photos de profil : dans le volume persistant (data_compte -> /app/data). Sans cela, elles
+# etaient ecrites dans le conteneur et effacees a chaque redeploiement.
+app:
+  uploads-path: ${COMPTE_UPLOADS_PATH:./data/uploads/}
+
+# Duree de vie du jeton de connexion : 24 h (120 min deconnectait l'utilisateur en pleine utilisation).
+jwt:
+  expiration-minutes: ${JWT_EXPIRATION_MINUTES:1440}

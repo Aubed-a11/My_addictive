@@ -59,13 +59,7 @@ export default function MusiqueHomeScreen({ navigation }) {
     return () => clearTimeout(minuteur);
   }, [onglet, recherche, charger]);
 
-  // On ne masque les titres sans fichier reel que sur l'onglet gratuit, et
-  // seulement hors recherche (une recherche doit pouvoir retrouver n'importe
-  // quel titre, y compris payant, meme sans fichier audio expose) :
-  // sur l'onglet payant, l'URL du fichier est volontairement absente tant
-  // que le titre n'est pas achete (mesure de securite), donc filtrer sur ce
-  // champ y cacherait a tort tous les titres payants non encore achetes.
-  const titresAvecAudio = (onglet === 'gratuit' && !recherche.trim()) ? titres.filter((t) => !!t.fichierAudioUrl || !!t.youtubeUrl) : titres;
+  const titresAvecAudio = titres;
 
   const titresAffiches = titresAvecAudio;
 

@@ -91,8 +91,14 @@ public class CompteController {
 
     /** Utilise en interne par les autres microservices (ex : live-service) pour recuperer un profil public. */
     @GetMapping("/{id}/public")
-    public ResponseEntity<UtilisateurResponse> profilPublic(@PathVariable Long id) {
-        return ResponseEntity.ok(UtilisateurResponse.fromEntity(compteService.obtenirParId(id)));
+    public ResponseEntity<java.util.Map<String, Object>> profilPublic(@PathVariable Long id) {
+        // Endpoint ouvert : uniquement des informations publiques (jamais l'email ni le role).
+        bj.myaddictive.compte.domain.Utilisateur u = compteService.obtenirParId(id);
+        java.util.Map<String, Object> publicProfil = new java.util.LinkedHashMap<>();
+        publicProfil.put("id", u.getId());
+        publicProfil.put("nomComplet", u.getNomComplet());
+        publicProfil.put("photoUrl", u.getPhotoUrl());
+        return ResponseEntity.ok(publicProfil);
     }
 
     private void exigerAdministrateur(String role) {

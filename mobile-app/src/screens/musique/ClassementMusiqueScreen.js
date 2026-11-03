@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { titresLisibles } from '../../utils/libelles';
 import { Text, StyleSheet, FlatList, View, Image, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Headphones, Download, ShoppingBag } from 'lucide-react-native';
+import { Headphones, ShoppingBag } from 'lucide-react-native';
 import client from '../../api/client';
 import { COLORS } from '../../theme/colors';
 import { resoudreUrlImage } from '../../utils/urlImage';
@@ -11,7 +11,6 @@ import BottomTabBar, { HAUTEUR_BARRE_ONGLETS } from '../../components/BottomTabB
 
 const CONFIG_TYPE = {
   streaming: { titre: 'Top Streaming', libelleCompteur: (t) => `${t.compteurEcoutes} ecoutes`, Icone: Headphones, couleur: '#F97316' },
-  telechargement_gratuit: { titre: 'Top Telechargement gratuit', libelleCompteur: (t) => `${t.compteurTelechargements} telechargements`, Icone: Download, couleur: '#3B82F6' },
   ventes: { titre: 'Top Vente', libelleCompteur: () => null, Icone: ShoppingBag, couleur: COLORS.or },
 };
 

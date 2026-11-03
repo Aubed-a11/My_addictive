@@ -16,4 +16,4 @@ while read -r pid; do
 done < .pids-backend
 
 rm -f .pids-backend
-echo "Backend arrete. (Les bases H2 dans ./data/ sont conservees.)"
+echo "Backend arrete. (La base SQLite dans ./data/ sont conservees.)"

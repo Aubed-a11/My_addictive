@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import LecteurVideo from '../../components/LecteurVideo';
+import LienVideo from '../../components/LienVideo';
 import { View, Text, StyleSheet, Image, ActivityIndicator, Pressable, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Video, ResizeMode } from 'expo-av';
 import { Share2, PlayCircle } from 'lucide-react-native';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -131,7 +130,7 @@ export default function CandidatDetailScreen({ navigation, route }) {
 
         {candidat.videoUrl ? (
           <View style={styles.lecteurVideo}>
-            <LecteurVideo url={resoudreUrlImage(candidat.videoUrl)} lectureAuto={false} />
+            <LienVideo url={resoudreUrlImage(candidat.videoUrl)} libelle="Voir l'extrait vidéo" couleur={COLORS.votes} />
           </View>
         ) : (
           <View style={styles.pasDeVideoConteneur}>
@@ -162,7 +161,7 @@ const styles = StyleSheet.create({
   carteNote: { flex: 1, alignItems: 'center', backgroundColor: COLORS.fondCarte, borderRadius: 12, padding: 14 },
   noteLabel: { color: COLORS.texteAtténué, fontSize: 12 },
   noteValeur: { color: COLORS.or, fontSize: 18, fontWeight: '800', marginTop: 4 },
-  lecteurVideo: { borderRadius: 14, overflow: 'hidden', marginTop: 20, backgroundColor: '#000' },
+  lecteurVideo: { borderRadius: 14, overflow: 'hidden', marginTop: 20 },
   video: { width: '100%', aspectRatio: 16 / 9 },
   pasDeVideoConteneur: { backgroundColor: COLORS.fondCarte, borderRadius: 14, padding: 24, marginTop: 20, alignItems: 'center', gap: 8 },
   pasDeVideo: { color: COLORS.texteAtténué, fontSize: 13, textAlign: 'center' },

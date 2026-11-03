@@ -38,6 +38,7 @@ public class ChatLiveService {
 
     public MessageChat envoyer(Long evenementId, String auteur, String contenu) {
         MessageChat message = new MessageChat(auteur, contenu);
+        if (message.contenu().isBlank()) return message; // rien a diffuser
         CopyOnWriteArrayList<MessageChat> liste = messages.computeIfAbsent(evenementId, id -> new CopyOnWriteArrayList<>());
         liste.add(message);
         while (liste.size() > LIMITE_MESSAGES) {
@@ -53,6 +54,7 @@ public class ChatLiveService {
 
     /** Diffuse une reaction (emoji) a tous les spectateurs de cet evenement. */
     public void envoyerReaction(Long evenementId, String emoji) {
+        if (emoji == null || emoji.isBlank() || emoji.length() > 8) return; // un emoji, pas du texte libre
         CopyOnWriteArrayList<long[]> horodatages = reactionsBrutes.computeIfAbsent(evenementId, id -> new CopyOnWriteArrayList<>());
         CopyOnWriteArrayList<String> emojis = reactionsEmojis.computeIfAbsent(evenementId, id -> new CopyOnWriteArrayList<>());
         horodatages.add(new long[]{Instant.now().toEpochMilli()});

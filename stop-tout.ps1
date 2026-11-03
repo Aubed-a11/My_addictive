@@ -35,4 +35,4 @@ foreach ($p in $processusOrphelins) {
     } catch { }
 }
 
-Write-Host "Backend arrete. (Les bases H2 dans .\data\ sont conservees.)" -ForegroundColor Green
+Write-Host "Backend arrete. (La base SQLite dans .\data\ sont conservees.)" -ForegroundColor Green

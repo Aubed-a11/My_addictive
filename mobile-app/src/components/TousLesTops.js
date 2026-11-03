@@ -8,14 +8,13 @@ import { COLORS } from '../theme/colors';
 // distantes : le texte et l'illustration font partie de l'image elle-meme.
 const TOPS = [
   { type: 'streaming', image: require('../../assets/images/top_streaming.jpg') },
-  { type: 'telechargement_gratuit', image: require('../../assets/images/top_telechargement.jpg') },
   { type: 'ventes', image: require('../../assets/images/top_vente.jpg') },
 ];
 
 /**
- * Section "Tous nos Tops" (page d'accueil Musique) : trois bannieres
+ * Section "Tous nos Tops" (page d'accueil Musique) : deux bannieres
  * menant chacune a un classement reellement distinct (streaming,
- * telechargements gratuits, ventes reelles) - voir MusiqueService.classement.
+ * ventes reelles) - voir MusiqueService.classement.
  */
 export default function TousLesTops({ navigation }) {
   return (

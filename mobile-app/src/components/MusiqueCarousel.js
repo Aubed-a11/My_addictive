@@ -60,7 +60,7 @@ export default function MusiqueCarousel({ navigation }) {
           setIndex(indexRef.current);
         }}
         renderItem={({ item, index: i }) => (
-          <Pressable style={[styles.carte, { width: largeurCarte }]} onPress={() => navigation.navigate('Lecteur', { id: item.id })}>
+          <Pressable style={[styles.carte, { width: largeurCarte }]} onPress={() => navigation.navigate('TitreDetail', { id: item.id })}>
             {item.imageUrl ? (
               <Image source={{ uri: resoudreUrlImage(item.imageUrl) }} style={styles.image} />
             ) : (

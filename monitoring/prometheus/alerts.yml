@@ -1,0 +1,39 @@
+groups:
+  - name: myaddictive
+    rules:
+      - alert: ServiceInjoignable
+        expr: up{job="services"} == 0
+        for: 2m
+        labels: {severity: critique}
+        annotations:
+          summary: "Le service {{ $labels.service }} ne repond plus"
+          description: "Prometheus n'arrive plus a lire les metriques de {{ $labels.service }} depuis 2 minutes."
+
+      - alert: ErreursServeurFrequentes
+        expr: sum by (service) (rate(http_server_requests_seconds_count{status=~"5.."}[5m])) > 0.1
+        for: 5m
+        labels: {severity: important}
+        annotations:
+          summary: "Erreurs 5xx sur {{ $labels.service }}"
+          description: "Plus d'une erreur serveur toutes les 10 secondes pendant 5 minutes."
+
+      - alert: MemoireJavaElevee
+        expr: sum by (service) (jvm_memory_used_bytes{area="heap"}) / sum by (service) (jvm_memory_max_bytes{area="heap"}) > 0.9
+        for: 10m
+        labels: {severity: important}
+        annotations:
+          summary: "Memoire Java a plus de 90 % sur {{ $labels.service }}"
+
+      - alert: DisqueBientotPlein
+        expr: 1 - (node_filesystem_avail_bytes{mountpoint="/rootfs",fstype!~"tmpfs|overlay"} or node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay"}) / (node_filesystem_size_bytes{mountpoint="/rootfs",fstype!~"tmpfs|overlay"} or node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay"}) > 0.85
+        for: 10m
+        labels: {severity: important}
+        annotations:
+          summary: "Disque du serveur rempli a plus de 85 %"
+
+      - alert: MemoireServeurElevee
+        expr: 1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes > 0.9
+        for: 10m
+        labels: {severity: important}
+        annotations:
+          summary: "Memoire du serveur utilisee a plus de 90 %"

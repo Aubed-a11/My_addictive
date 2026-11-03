@@ -63,11 +63,7 @@ export function retirerMentionDemo(texte) {
   return texte.replace(/\s*\[DEMO\]\s*/gi, ' ').trim();
 }
 
-/**
- * Ne garde que les titres qui ont un fichier audio rattache : un titre sans fichier
- * ne peut ni se jouer ni se telecharger, inutile de le montrer dans les listes.
- * (Limite : on verifie la presence de l'URL, pas que le fichier existe encore sur le serveur.)
- */
+/** Liste de titres sans entrees vides (l'application n'a plus de lecteur audio : aucun titre n'est masque faute de fichier). */
 export function titresLisibles(liste) {
-  return (liste || []).filter((t) => t && t.fichierAudioUrl);
+  return (liste || []).filter((t) => !!t);
 }

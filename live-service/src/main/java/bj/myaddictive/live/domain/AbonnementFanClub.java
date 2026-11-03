@@ -21,6 +21,13 @@ public class AbonnementFanClub {
     @Column(name = "date_expiration", nullable = false)
     private Instant dateExpiration;
 
+    /** Derniere transaction de paiement appliquee (idempotence : une notification rejouee ne prolonge pas deux fois). */
+    @Column(name = "derniere_transaction_id")
+    private Long derniereTransactionId;
+
+    public Long getDerniereTransactionId() { return derniereTransactionId; }
+    public void setDerniereTransactionId(Long derniereTransactionId) { this.derniereTransactionId = derniereTransactionId; }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getUtilisateurId() { return utilisateurId; }

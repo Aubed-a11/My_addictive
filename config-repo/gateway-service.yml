@@ -5,7 +5,10 @@ spring:
     gateway:
       discovery:
         locator:
-          enabled: true
+          # Desactive : il exposait /<nom-du-service>/api/... et contournait les blocages
+          # du filtre JWT (webhook generique, creation de transaction, /api/interne).
+          # Toutes les routes utiles sont declarees explicitement ci-dessous.
+          enabled: false
           lower-case-service-id: true
       routes:
         - id: compte-service

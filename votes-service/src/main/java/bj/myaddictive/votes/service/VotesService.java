@@ -168,10 +168,18 @@ public class VotesService {
     @Transactional
     public void voter(Long utilisateurId, VoterRequest requete) {
         Candidat candidat = obtenirCandidat(requete.candidatId());
+        // Les pieces ne sont pas remboursables : aucun vote (donc aucune depense) hors des phases de vote.
+        Competition competitionDuVote = obtenirCompetition(candidat.getCompetitionId());
+        if (competitionDuVote.getPhase() == bj.myaddictive.votes.domain.PhaseCompetition.INSCRIPTIONS) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Les votes ne sont pas encore ouverts pour cette competition.");
+        }
+        if (competitionDuVote.getPhase() == bj.myaddictive.votes.domain.PhaseCompetition.TERMINEE) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Cette competition est terminee : les votes sont clos.");
+        }
         if (candidat.getStatut() == StatutCandidat.ELIMINE) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Ce candidat a ete elimine, le vote n'est plus possible.");
         }
-        Portefeuille portefeuille = portefeuilleRepository.findByUtilisateurId(utilisateurId)
+        Portefeuille portefeuille = portefeuilleRepository.findByUtilisateurIdForUpdate(utilisateurId)
                 .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "Portefeuille vide : achetez des pieces avant de voter."));
         if (portefeuille.getSolde() < 1) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Solde de pieces insuffisant.");

@@ -1,0 +1,94 @@
+# Base de donnees unique SQLite : un volume Docker commun a tous les services
+# qui ont une base. Chaque service y range ses tables avec son propre prefixe
+# (compte_, musique_, live_, votes_, boutique_, paiement_, media_).
+# Docker Compose charge automatiquement ce fichier en plus de docker-compose.yml.
+volumes:
+  data_db:
+
+services:
+  compte-service:
+    volumes:
+      - data_db:/app/shared-db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8091/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 150s
+  media-service:
+    volumes:
+      - data_db:/app/shared-db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8082/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 150s
+  musique-service:
+    volumes:
+      - data_db:/app/shared-db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8083/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 150s
+  live-service:
+    volumes:
+      - data_db:/app/shared-db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8084/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 150s
+  votes-service:
+    volumes:
+      - data_db:/app/shared-db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8085/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 150s
+  boutique-service:
+    volumes:
+      - data_db:/app/shared-db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8086/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 150s
+  paiement-service:
+    volumes:
+      - data_db:/app/shared-db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8087/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 150s
+  gateway-service:
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -S -q -O /dev/null http://localhost:8090/ 2>&1 | grep -q 'HTTP/'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+  config-service:
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8888/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s

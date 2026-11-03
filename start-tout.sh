@@ -2,7 +2,7 @@
 #
 # Demarre TOUT en une seule commande, SANS DOCKER : compile les 10
 # microservices avec Maven, les lance directement en Java (bases de
-# donnees H2 embarquees, pas de Postgres/Redis/RabbitMQ/MinIO a installer),
+# base SQLite unique embarquee, pas de Postgres/Redis/RabbitMQ/MinIO a installer),
 # puis lance l'app mobile (Expo) avec detection automatique de l'IP locale.
 #
 # Usage : ./start-tout.sh
@@ -95,9 +95,11 @@ if ! mvn -q -DskipTests clean package; then
 fi
 succes "Compilation terminee."
 
-# ---------- 3. Lancement natif des services (H2 embarque, pas d'infra externe requise) ----------
-mkdir -p logs
+# ---------- 3. Lancement natif des services (SQLite embarque, pas d'infra externe requise) ----------
+mkdir -p logs data
 RACINE="$(pwd)"
+# Base SQLite unique pour tous les services (en Docker : /app/shared-db/myaddictive.db, volume data_db)
+export APP_DB_PATH="$RACINE/data/myaddictive.db"
 : > .pids-backend
 
 lancer_service() {

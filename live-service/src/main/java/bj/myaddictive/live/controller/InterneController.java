@@ -43,7 +43,8 @@ public class InterneController {
 
         if ("FAN_CLUB".equals(typeObjet)) {
             Long chaineId = Long.valueOf(referenceId);
-            liveService.confirmerAbonnementFanClub(utilisateurId, chaineId);
+            Long transactionFanClub = Long.valueOf(String.valueOf(evenement.get("transactionId")));
+            liveService.confirmerAbonnementFanClub(utilisateurId, chaineId, transactionFanClub);
             log.info("Fan club confirme/prolonge pour la chaine {} (utilisateur {}).", chaineId, utilisateurId);
             return ResponseEntity.ok().build();
         }
@@ -66,6 +67,7 @@ public class InterneController {
         billet.setCodeQr("MYADD-BILLET-" + UUID.randomUUID());
         billet.setTransactionId(transactionId);
         billetRepository.save(billet);
+        liveService.libererReservation(transactionId);
         log.info("Billet emis pour l'evenement {} (utilisateur {}, transaction {}).", evenementId, utilisateurId, transactionId);
         return ResponseEntity.ok().build();
     }
