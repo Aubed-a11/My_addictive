@@ -35,6 +35,6 @@
     "lucide-react-native": "^0.400.0",
     "react-native-web": "~0.19.10",
     "react-dom": "18.2.0",
-    "@expo/metro-runtime": "~3.2.3"
+    "@expo/metro-runtime": "~58.0.16"
   }
 }
