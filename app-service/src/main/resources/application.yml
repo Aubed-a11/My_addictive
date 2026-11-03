@@ -1,0 +1,101 @@
+# Configuration unique de l'application (ex-services compte, media, musique, live, votes, boutique, paiement).
+# Rien n'est lu depuis config-service : tout est ici, les secrets viennent de .env.production.
+spring:
+  application:
+    name: app-service
+  datasource:
+    # Base unique SQLite (volume Docker data_db). Les tables sont prefixees par domaine
+    # (compte_, media_, musique_, live_, votes_, boutique_, paiement_) directement dans les entites.
+    # WAL + busy_timeout : tolere des lectures pendant une ecriture ;
+    # transaction_mode=IMMEDIATE evite les erreurs de verrou lors d'une lecture suivie d'une ecriture.
+    url: jdbc:sqlite:${APP_DB_PATH:/app/shared-db/myaddictive.db}?journal_mode=WAL&busy_timeout=30000&transaction_mode=IMMEDIATE&synchronous=NORMAL
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 8
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+  # Envoi des e-mails (code de reinitialisation du mot de passe) via Gmail ; identifiants dans .env.production.
+  mail:
+    host: smtp.gmail.com
+    port: 465
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          connectiontimeout: 5000
+          timeout: 10000
+          writetimeout: 10000
+          ssl:
+            enable: true
+          socketFactory:
+            port: 465
+            class: javax.net.ssl.SSLSocketFactory
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  health:
+    # Pas de sonde SMTP dans l'etat de sante : un Gmail momentanement injoignable ne doit pas
+    # declarer toute l'application "en panne".
+    mail:
+      enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: app-service
+
+jwt:
+  secret: ${JWT_SECRET:myaddictive-dev-secret-change-in-production-0123456789}
+  # 24 h (120 min deconnectait l'utilisateur en pleine utilisation).
+  expiration-minutes: ${JWT_EXPIRATION_MINUTES:1440}
+
+google:
+  client-id: ${GOOGLE_CLIENT_ID:302316778064-6gdvcltrt4na77ao05kjrec1kl3v6v7s.apps.googleusercontent.com}
+
+# Compte administrateur cree automatiquement au premier demarrage.
+admin:
+  email: ${ADMIN_EMAIL:admin@myaddictive.com}
+  mot-de-passe: ${ADMIN_MOT_DE_PASSE:AdminAddictive2026!}
+
+# Fichiers televerses, dans des volumes Docker persistants.
+compte:
+  uploads-path: ${COMPTE_UPLOADS_PATH:./data/uploads/}
+media:
+  uploads-path: ${MEDIA_UPLOADS_PATH:./uploads/}
+
+paiement:
+  simulation-autorisee: ${PAIEMENT_SIMULATION:false}
+
+mobile-money:
+  mtn:
+    base-url: ${MTN_MOMO_BASE_URL:https://sandbox.momodeveloper.mtn.com}
+    subscription-key: ${MTN_MOMO_SUBSCRIPTION_KEY:}
+    api-user: ${MTN_MOMO_API_USER:}
+    api-key: ${MTN_MOMO_API_KEY:}
+    target-environment: ${MTN_MOMO_TARGET_ENVIRONMENT:sandbox}
+    callback-host: ${MTN_MOMO_CALLBACK_HOST:}
+  moov:
+    base-url: ${MOOV_MONEY_BASE_URL:}
+    api-key: ${MOOV_MONEY_API_KEY:}
+  kkiapay:
+    secret-key: ${KKIAPAY_SECRET_KEY:}
+    webhook-secret: ${KKIAPAY_WEBHOOK_SECRET:}
+    public-key: ${KKIAPAY_PUBLIC_KEY:}
+    private-key: ${KKIAPAY_PRIVATE_KEY:}
+    sandbox: ${KKIAPAY_SANDBOX:true}

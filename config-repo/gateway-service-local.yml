@@ -1,0 +1,43 @@
+# Profil "local" (start-tout.sh / start-tout.ps1) : l'application tourne sur ce PC, pas dans Docker.
+server:
+  port: 8090
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          # Desactive : il exposait /<nom-du-service>/api/... et contournait les blocages
+          # du filtre JWT (webhook generique, creation de transaction, /api/interne).
+          # Toutes les routes utiles sont declarees explicitement ci-dessous.
+          enabled: false
+          lower-case-service-id: true
+      # Les 7 anciens services sont regroupes dans app-service : toutes les routes pointent vers lui.
+      routes:
+        - id: compte-service
+          uri: http://localhost:8080
+          predicates:
+            - Path=/api/compte/**
+        - id: media-service
+          uri: http://localhost:8080
+          predicates:
+            - Path=/api/media/**
+        - id: musique-service
+          uri: http://localhost:8080
+          predicates:
+            - Path=/api/musique/**
+        - id: live-service
+          uri: http://localhost:8080
+          predicates:
+            - Path=/api/live/**
+        - id: votes-service
+          uri: http://localhost:8080
+          predicates:
+            - Path=/api/votes/**
+        - id: boutique-service
+          uri: http://localhost:8080
+          predicates:
+            - Path=/api/boutique/**
+        - id: paiement-service
+          uri: http://localhost:8080
+          predicates:
+            - Path=/api/paiement/**

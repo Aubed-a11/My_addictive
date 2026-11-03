@@ -36,7 +36,7 @@ if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
 # processus java.exe orphelins peuvent encore occuper les ports necessaires,
 # empechant les nouveaux services de demarrer correctement (meme symptome que
 # "la gateway ne repond pas", pour une toute autre raison).
-$portsRequis = @(8090, 8091, 8082, 8083, 8084, 8085, 8086, 8087, 8761, 8888)
+$portsRequis = @(8090, 8080, 8761, 8888)
 $portsOccupes = @()
 foreach ($port in $portsRequis) {
     $ecoute = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
@@ -187,7 +187,7 @@ if ($nettoyes -gt 0) {
 }
 
 # ---------- 2. Compilation de tous les microservices (un seul build multi-module) ----------
-Info "Compilation des 10 microservices avec Maven (premiere fois : peut prendre plusieurs minutes)..."
+Info "Compilation des 4 services avec Maven (premiere fois : peut prendre plusieurs minutes)..."
 mvn -q -DskipTests clean package
 if ($LASTEXITCODE -ne 0) {
     Erreur "La compilation Maven a echoue. Regarde le message d'erreur ci-dessus (souvent une erreur de compilation Java a corriger)."
@@ -198,10 +198,10 @@ Succes "Compilation terminee."
 # ---------- 2bis. Verification immediate que chaque .jar est bien executable ----------
 # Plutot que de decouvrir 5 minutes plus tard, via un message crypte dans les logs,
 # qu'un .jar n'a pas ete correctement "repackage" par Spring Boot (erreur "no main
-# manifest attribute"), on verifie tout de suite le manifeste de chacun des 10 jars.
-Info "Verification que les 10 jars sont bien executables..."
+# manifest attribute"), on verifie tout de suite le manifeste de chacun des 4 jars.
+Info "Verification que les 4 jars sont bien executables..."
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-$servicesAttendus = @("discovery-service","config-service","compte-service","media-service","musique-service","live-service","votes-service","boutique-service","paiement-service","gateway-service")
+$servicesAttendus = @("discovery-service","config-service","app-service","gateway-service")
 $jarsInvalides = @()
 foreach ($service in $servicesAttendus) {
     $jar = Get-ChildItem -Path "$PSScriptRoot\$service\target" -Filter "*.jar" -ErrorAction SilentlyContinue |
@@ -245,7 +245,7 @@ if ($jarsInvalides.Count -gt 0) {
     Erreur "Taille normale d'un jar Spring Boot execute : entre 20 et 60 Mo (toutes les dependances incluses)."
     exit 1
 }
-Succes "Les 10 jars sont valides et executables."
+Succes "Les 4 jars sont valides et executables."
 
 # ---------- 3. Lancement natif des services (SQLite embarque, pas d'infra externe requise) ----------
 New-Item -ItemType Directory -Force -Path "logs" | Out-Null
@@ -299,22 +299,22 @@ if (-not $configPret) {
     Attention "mais les services suivants risquent de mal demarrer (voir server.port en repli local desormais)."
 }
 
-Info "Lancement des 7 microservices metier (compte, media, musique, live, votes, boutique, paiement)..."
-foreach ($service in @("compte-service","media-service","musique-service","live-service","votes-service","boutique-service","paiement-service")) {
-    Lancer-Service $service
-}
-Start-Sleep -Seconds 15
+Info "Lancement de l'application (compte, media, musique, live, votes, boutique, paiement)..."
+Lancer-Service "app-service"
+Start-Sleep -Seconds 20
 
 Info "Lancement de la gateway..."
+$env:SPRING_PROFILES_ACTIVE = "local"
 Lancer-Service "gateway-service"
+Remove-Item Env:SPRING_PROFILES_ACTIVE -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 10
 
 # Sauvegarde des PID pour pouvoir tout arreter proprement plus tard.
 $script:pidsBackend | Set-Content -Path ".pids-backend"
-Succes "Les 10 services sont lances. Logs consultables dans le dossier logs\."
+Succes "Les 4 services sont lances. Logs consultables dans le dossier logs\."
 
 # ---------- 4. Attente que la gateway reponde ----------
-Info "Verification que la gateway repond (peut prendre 1 a 2 minutes le temps qu'Eureka enregistre tous les services)..."
+Info "Verification que la gateway repond (peut prendre 1 a 2 minutes le temps que tout demarre)..."
 $pret = $false
 for ($i = 0; $i -lt 60; $i++) {
     try {
@@ -326,7 +326,7 @@ for ($i = 0; $i -lt 60; $i++) {
 }
 Write-Host ""
 if (-not $pret) {
-    Attention "La gateway ne repond pas encore. Regarde logs\gateway-service.err.log et logs\discovery-service.err.log si l'app mobile n'arrive pas a se connecter."
+    Attention "La gateway ne repond pas encore. Regarde logs\gateway-service.err.log et logs\app-service.err.log si l'app mobile n'arrive pas a se connecter."
 } else {
     Succes "Backend operationnel."
 }
@@ -394,7 +394,7 @@ $env:BROWSER = "none"
 
 Succes "Tout est pret (backend + dashboard admin + app mobile). Lancement d'Expo - scanne le QR code avec l'app Expo Go sur ton telephone."
 # Augmente la limite memoire par defaut de Node.js : sur une machine qui fait
-# deja tourner les 10 microservices Java, le bundler Metro peut sinon planter
+# deja tourner les 4 services Java, le bundler Metro peut sinon planter
 # avec "Fatal process out of memory" en pleine compilation (voir aussi
 # metro.config.js, qui limite le nombre de workers paralleles pour la meme raison).
 $env:NODE_OPTIONS = "--max-old-space-size=4096"

@@ -8,7 +8,7 @@ set -e
 cd /opt/myaddictive
 ENVF="--env-file .env.production"
 DC="docker compose $ENVF"
-SERVICES="compte-service media-service musique-service live-service votes-service boutique-service paiement-service"
+SERVICES="app-service"
 SORTIE=/opt/myaddictive/migration-h2
 SAUVEGARDES=/opt/sauvegardes
 mkdir -p "$SORTIE" "$SAUVEGARDES"
@@ -61,6 +61,6 @@ done
 echo "== 6/6 Reprise dans SQLite puis redemarrage"
 python3 migrer_h2_sqlite.py importer "$DB" "$SORTIE"
 $DC up -d
-echo "Services relances. Attends 3 a 5 minutes (inscription Eureka), puis :"
+echo "Services relances. Attends 2 a 3 minutes, puis :"
 echo "  $DC restart proxy"
 echo "Verification : curl -s -o /dev/null -w '%{http_code}\n' https://76-13-37-17.nip.io/api/musique/titres?size=1"

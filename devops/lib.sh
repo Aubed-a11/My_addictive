@@ -7,7 +7,9 @@ SAUV=/opt/sauvegardes
 ENVF="--env-file .env.production"
 BASE_URL="${BASE_URL:-https://76-13-37-17.nip.io}"
 # Services qui ont une base SQLite (volume data_db)
-SERVICES_DB="compte-service media-service musique-service live-service votes-service boutique-service paiement-service"
+SERVICES_DB="app-service"
+# Anciens microservices (remplaces par app-service, desactives par le profil "ancien")
+ANCIENS_SERVICES="compte-service media-service musique-service live-service votes-service boutique-service paiement-service"
 
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
@@ -45,6 +47,13 @@ completer_compose() {
   [ -f docker-compose.yml ] || { log "ERREUR : docker-compose.yml introuvable dans $APP"; return 1; }
   grep -q 'MAIL_USERNAME' docker-compose.yml || sed -i '/ADMIN_MOT_DE_PASSE: /a\      MAIL_USERNAME: ${MAIL_USERNAME:-}\n      MAIL_PASSWORD: ${MAIL_PASSWORD:-}' docker-compose.yml
   grep -q 'KKIAPAY_PUBLIC_KEY' docker-compose.yml || sed -i '/KKIAPAY_SECRET_KEY: /a\      KKIAPAY_WEBHOOK_SECRET: ${KKIAPAY_WEBHOOK_SECRET:-}\n      KKIAPAY_PUBLIC_KEY: ${KKIAPAY_PUBLIC_KEY:-}\n      KKIAPAY_PRIVATE_KEY: ${KKIAPAY_PRIVATE_KEY:-}\n      KKIAPAY_SANDBOX: ${KKIAPAY_SANDBOX:-true}\n      PAIEMENT_SIMULATION: ${PAIEMENT_SIMULATION:-false}' docker-compose.yml
+  # La configuration (compose + override) doit etre valide AVANT de toucher aux conteneurs.
+  if ! docker compose $ENVF config -q 2>/tmp/compose-erreur.txt; then
+    log "ERREUR : configuration docker compose invalide :"; cat /tmp/compose-erreur.txt; return 1
+  fi
+  if ! docker compose $ENVF config --services | grep -qx app-service; then
+    log "ERREUR : le service app-service est absent de la configuration (docker-compose.override.yml manquant ?)"; return 1
+  fi
 }
 
 # 4) Compilation Maven de tous les modules
@@ -67,7 +76,7 @@ construire_images() {
 # 6) Base SQLite unique en mode WAL
 initialiser_db() {
   cd "$APP"
-  docker compose $ENVF up --no-start compte-service >/dev/null 2>&1 || true
+  docker compose $ENVF up --no-start app-service >/dev/null 2>&1 || true
   local vol dir
   vol=$(docker volume ls --format '{{.Name}}' | grep -E '(^|_)data_db$' | head -1)
   if [ -z "$vol" ]; then log "ATTENTION : volume data_db introuvable (docker-compose.override.yml present ?)"; return 0; fi
@@ -83,6 +92,16 @@ PY
 # 7) Demarrage puis attente que tous les conteneurs a healthcheck soient "healthy"
 demarrer_et_attendre() {
   cd "$APP"
+  # La configuration Docker doit etre valide (ex. un service qui dependrait d'un ancien service desactive)
+  if ! docker compose $ENVF config -q 2>/tmp/compose-erreur.txt; then
+    log "ERREUR : configuration docker compose invalide :"; cat /tmp/compose-erreur.txt
+    log "Envoyez ce message tel quel (sans mot de passe) pour corriger docker-compose.yml"
+    return 1
+  fi
+  # Les anciens microservices (desormais regroupes dans app-service) ne doivent plus tourner :
+  # ils partageraient la meme base SQLite et gaspilleraient la memoire.
+  # shellcheck disable=SC2086
+  docker compose --profile ancien --profile hors-service $ENVF rm -sf $ANCIENS_SERVICES proxy >/dev/null 2>&1 || true
   docker compose $ENVF up -d --remove-orphans
   log "Attente des healthchecks (10 min maximum)"
   local fin=$((SECONDS+600)) ko id nom etat
@@ -96,11 +115,28 @@ demarrer_et_attendre() {
     log "en attente :$ko"; sleep 15
   done
   log "ERREUR : conteneurs pas prets apres 10 min :$ko"
+  docker compose $ENVF logs --tail=40 app-service 2>/dev/null || true
   return 1
 }
 
-# 8) Le proxy garde en cache l'adresse de la passerelle : on le redemarre apres chaque deploiement
-redemarrer_proxy() { cd "$APP"; docker compose $ENVF restart proxy; sleep 15; }
+# 7bis) La passerelle doit joindre l'application (meme reseau Docker) : sinon, on le dit clairement
+verifier_passerelle_vers_app() {
+  cd "$APP"
+  if docker compose $ENVF exec -T gateway-service wget -q -O /dev/null -T 10 http://app-service:8080/actuator/health 2>/dev/null; then
+    log "La passerelle joint bien app-service"
+  else
+    log "ATTENTION : la passerelle ne joint pas encore http://app-service:8080 (reseau Docker different ou application pas prete)"
+    return 1
+  fi
+}
+
+# 8) Le nginx du SERVEUR (partage avec d'autres sites) envoie le trafic vers la passerelle (127.0.0.1:8090).
+# On le recharge en douceur, seulement si sa configuration est valide : aucun site n'est coupe.
+redemarrer_proxy() {
+  if nginx -t >/dev/null 2>&1; then systemctl reload nginx; log "nginx du serveur recharge"
+  else log "ATTENTION : configuration nginx invalide, rechargement ignore (rien n'a ete coupe) :"; nginx -t 2>&1 | tail -5; fi
+  sleep 5
+}
 
 # 9) Tests de fumee (6 minutes de patience : inscription Eureka)
 tests_fumee() {

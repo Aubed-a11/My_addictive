@@ -1,0 +1,291 @@
+package bj.myaddictive.boutique.service;
+
+import bj.myaddictive.app.UrlInterne;
+import bj.myaddictive.boutique.domain.*;
+import bj.myaddictive.boutique.dto.AjouterPanierRequest;
+import bj.myaddictive.boutique.dto.InitierCommandeRequest;
+import bj.myaddictive.boutique.dto.InscriptionVendeurRequest;
+import bj.myaddictive.boutique.exception.ApiException;
+import bj.myaddictive.boutique.repository.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import java.util.List;
+import java.util.Map;
+
+@Service
+public class BoutiqueService {
+
+    private final VendeurRepository vendeurRepository;
+    private final ProduitRepository produitRepository;
+    private final PanierItemRepository panierItemRepository;
+    private final CommandeRepository commandeRepository;
+    private final LigneCommandeRepository ligneCommandeRepository;
+    private final WebClient.Builder webClientBuilder;
+
+    public BoutiqueService(VendeurRepository vendeurRepository, ProduitRepository produitRepository,
+                            PanierItemRepository panierItemRepository, CommandeRepository commandeRepository,
+                            LigneCommandeRepository ligneCommandeRepository, WebClient.Builder webClientBuilder) {
+        this.vendeurRepository = vendeurRepository;
+        this.produitRepository = produitRepository;
+        this.panierItemRepository = panierItemRepository;
+        this.commandeRepository = commandeRepository;
+        this.ligneCommandeRepository = ligneCommandeRepository;
+        this.webClientBuilder = webClientBuilder;
+    }
+
+    /** Formulaire de demande d'ouverture de boutique (section 8.1) : reste EN_ATTENTE jusqu'a validation admin. */
+    public Vendeur demanderOuvertureBoutique(Long utilisateurId, InscriptionVendeurRequest requete) {
+        if (vendeurRepository.findByUtilisateurId(utilisateurId).isPresent()) {
+            throw new ApiException(HttpStatus.CONFLICT, "Une boutique existe deja pour ce compte.");
+        }
+        Vendeur vendeur = new Vendeur();
+        vendeur.setUtilisateurId(utilisateurId);
+        vendeur.setNomBoutique(requete.nomBoutique());
+        vendeur.setDescription(requete.description());
+        vendeur.setImageUrl(requete.imageUrl());
+        vendeur.setCategorie(requete.categorie());
+        vendeur.setStatut(StatutVendeur.EN_ATTENTE);
+        return vendeurRepository.save(vendeur);
+    }
+
+    public Page<Vendeur> listerVendeursValides(Pageable pageable) {
+        return vendeurRepository.findByStatut(StatutVendeur.VALIDE, pageable);
+    }
+
+    /** Vue back-office : tous les vendeurs, ou filtres par statut (ex. EN_ATTENTE a valider). */
+    public Page<Vendeur> listerTousVendeurs(StatutVendeur statutFiltre, Pageable pageable) {
+        if (statutFiltre != null) return vendeurRepository.findByStatut(statutFiltre, pageable);
+        return vendeurRepository.findAll(pageable);
+    }
+
+    public Vendeur obtenirVendeur(Long id) {
+        return vendeurRepository.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Boutique introuvable."));
+    }
+
+    /** Action reservee au back office (section 28.5) : valider/refuser/suspendre une boutique. */
+    public Vendeur changerStatutVendeur(Long id, StatutVendeur statut) {
+        Vendeur vendeur = obtenirVendeur(id);
+        vendeur.setStatut(statut);
+        return vendeurRepository.save(vendeur);
+    }
+
+    public Page<Produit> listerProduits(String categorie, Long vendeurId, Pageable pageable) {
+        if (vendeurId != null) return produitRepository.findByVendeurId(vendeurId, pageable);
+        if (categorie != null && !categorie.isBlank()) return produitRepository.findByCategorie(categorie, pageable);
+        return produitRepository.findAll(pageable);
+    }
+
+    /** Drops limites avec compte a rebours (section 8.2), utilisables par tout vendeur. */
+    public Page<Produit> listerDrops(Pageable pageable) {
+        return produitRepository.findByDropLimiteTrueOrderByDateDebutDropAsc(pageable);
+    }
+
+    public Produit obtenirProduit(Long id) {
+        return produitRepository.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Produit introuvable."));
+    }
+
+    public Produit publierProduit(Long utilisateurId, Produit produit) {
+        Vendeur vendeur = vendeurRepository.findByUtilisateurId(utilisateurId)
+                .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "Aucune boutique associee a ce compte."));
+        if (vendeur.getStatut() != StatutVendeur.VALIDE) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Votre boutique doit etre validee par l'administration avant de publier un produit.");
+        }
+        produit.setVendeurId(vendeur.getId());
+        return produitRepository.save(produit);
+    }
+
+    /**
+     * Publication d'un produit par le back-office admin : contrairement a
+     * publierProduit(), pas de verification de propriete de boutique (l'admin
+     * peut publier pour n'importe quel vendeur, en precisant vendeurId).
+     */
+    public Produit creerProduitAdmin(Produit produit) {
+        return produitRepository.save(produit);
+    }
+
+    public Produit modifierProduitAdmin(Long id, Produit donnees) {
+        Produit produit = obtenirProduit(id);
+        produit.setNom(donnees.getNom());
+        produit.setDescription(donnees.getDescription());
+        produit.setCategorie(donnees.getCategorie());
+        produit.setPrixFcfa(donnees.getPrixFcfa());
+        produit.setStock(donnees.getStock());
+        produit.setImageUrl(donnees.getImageUrl());
+        produit.setDropLimite(donnees.isDropLimite());
+        produit.setDateDebutDrop(donnees.getDateDebutDrop());
+        if (donnees.getVendeurId() != null) produit.setVendeurId(donnees.getVendeurId());
+        return produitRepository.save(produit);
+    }
+
+    public void supprimerProduit(Long id) {
+        if (!produitRepository.existsById(id)) throw new ApiException(HttpStatus.NOT_FOUND, "Produit introuvable.");
+        produitRepository.deleteById(id);
+    }
+
+    public List<bj.myaddictive.boutique.dto.PanierItemResponse> panier(Long utilisateurId) {
+        return panierItemRepository.findByUtilisateurId(utilisateurId).stream()
+                .map(item -> {
+                    Produit produit = produitRepository.findById(item.getProduitId()).orElse(null);
+                    return bj.myaddictive.boutique.dto.PanierItemResponse.fromEntities(item, produit);
+                })
+                .toList();
+    }
+
+    /** Un produit d'un vendeur suspendu ou refuse ne peut plus etre commande (les produits sans vendeur, ajoutes par l'administration, restent vendables). */
+    private void verifierVendeurActif(Produit produit) {
+        if (produit.getVendeurId() == null) return;
+        vendeurRepository.findById(produit.getVendeurId()).ifPresent(v -> {
+            if (v.getStatut() != StatutVendeur.VALIDE) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "\"" + produit.getNom() + "\" n'est plus disponible a la vente.");
+            }
+        });
+    }
+
+    @Transactional
+    public PanierItem ajouterAuPanier(Long utilisateurId, AjouterPanierRequest requete) {
+        Produit produit = obtenirProduit(requete.produitId());
+        verifierVendeurActif(produit);
+        if (produit.isDropLimite() && produit.getDateDebutDrop() != null && produit.getDateDebutDrop().isAfter(java.time.Instant.now())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Ce drop n'est pas encore en vente.");
+        }
+        // Un produit avec des tailles disponibles (vetement) exige que la
+        // taille soit choisie avant l'ajout au panier.
+        if (produit.getTaillesDisponibles() != null && !produit.getTaillesDisponibles().isBlank()) {
+            java.util.List<String> taillesValides = java.util.Arrays.asList(produit.getTaillesDisponibles().split(","));
+            if (requete.taille() == null || requete.taille().isBlank() || !taillesValides.contains(requete.taille())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Merci de choisir une taille parmi : " + produit.getTaillesDisponibles());
+            }
+        }
+        return panierItemRepository.findByUtilisateurIdAndProduitIdAndTaille(utilisateurId, requete.produitId(), requete.taille())
+                .map(item -> { item.setQuantite(item.getQuantite() + requete.quantite()); return panierItemRepository.save(item); })
+                .orElseGet(() -> {
+                    PanierItem item = new PanierItem();
+                    item.setUtilisateurId(utilisateurId);
+                    item.setProduitId(requete.produitId());
+                    item.setQuantite(requete.quantite());
+                    item.setTaille(requete.taille());
+                    return panierItemRepository.save(item);
+                });
+    }
+
+    public void retirerDuPanier(Long utilisateurId, Long panierItemId) {
+        PanierItem item = panierItemRepository.findById(panierItemId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Article introuvable dans le panier."));
+        if (!item.getUtilisateurId().equals(utilisateurId)) throw new ApiException(HttpStatus.FORBIDDEN, "Cet article n'appartient pas a votre panier.");
+        panierItemRepository.delete(item);
+    }
+
+    /** Ajuste la quantite d'un article deja present dans le panier (section 8.1) : jamais en-dessous de 1, retirer explicitement l'article sinon. */
+    public PanierItem modifierQuantitePanier(Long utilisateurId, Long panierItemId, int nouvelleQuantite) {
+        if (nouvelleQuantite < 1) throw new ApiException(HttpStatus.BAD_REQUEST, "La quantite doit etre d'au moins 1 (retirez l'article pour l'enlever du panier).");
+        PanierItem item = panierItemRepository.findById(panierItemId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Article introuvable dans le panier."));
+        if (!item.getUtilisateurId().equals(utilisateurId)) throw new ApiException(HttpStatus.FORBIDDEN, "Cet article n'appartient pas a votre panier.");
+        item.setQuantite(nouvelleQuantite);
+        return panierItemRepository.save(item);
+    }
+
+    /**
+     * Valide le panier (potentiellement multi-vendeurs) : cree la Commande et
+     * ses LigneCommande en EN_ATTENTE, puis delegue le paiement. La commande
+     * n'est confirmee (statut PAYEE, stock decompte) qu'a la reception de
+     * l'evenement RabbitMQ de paiement reussi.
+     */
+    /**
+     * Frais de livraison forfaitaires, appliques a toute commande quelle
+     * que soit l'adresse (pas de zonage par distance pour le moment).
+     * Expose aussi via l'API pour que l'application mobile puisse afficher
+     * ce montant au client AVANT la validation du panier, plutot que de le
+     * lui reveler seulement apres coup au moment du paiement.
+     */
+    public static final long FRAIS_LIVRAISON_FCFA = 1000L;
+
+    @Transactional
+    public Map<String, Object> initierCommande(String userId, InitierCommandeRequest requete) {
+        if (requete.adresseLivraison() == null || requete.adresseLivraison().isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Une adresse de livraison est necessaire pour valider la commande.");
+        }
+        Long utilisateurId = Long.valueOf(userId);
+        List<PanierItem> items = panierItemRepository.findByUtilisateurId(utilisateurId);
+        if (items.isEmpty()) throw new ApiException(HttpStatus.BAD_REQUEST, "Le panier est vide.");
+
+        long total = 0L;
+        Commande commande = new Commande();
+        commande.setUtilisateurId(utilisateurId);
+        commande.setMontantTotalFcfa(0L);
+        commande.setAdresseLivraison(requete.adresseLivraison());
+        commande.setFraisLivraisonFcfa(FRAIS_LIVRAISON_FCFA);
+        commande = commandeRepository.save(commande);
+
+        for (PanierItem item : items) {
+            Produit produit = obtenirProduit(item.getProduitId());
+            verifierVendeurActif(produit);
+            // Decrement atomique et conditionnel (voir ProduitRepository) : si 0 ligne
+            // est affectee, soit le stock etait deja insuffisant, soit un autre achat
+            // vient de prendre les derniers exemplaires a l'instant meme - dans les
+            // deux cas, on annule (la transaction @Transactional annule aussi les
+            // decrements deja faits pour les articles precedents de ce meme panier).
+            int lignesAffectees = produitRepository.decrementerStockSiSuffisant(produit.getId(), item.getQuantite());
+            if (lignesAffectees == 0) {
+                throw new ApiException(HttpStatus.CONFLICT, "Stock insuffisant pour \"" + produit.getNom() + "\" (peut-etre vendu entre-temps).");
+            }
+            LigneCommande ligne = new LigneCommande();
+            ligne.setCommandeId(commande.getId());
+            ligne.setVendeurId(produit.getVendeurId());
+            ligne.setProduitId(produit.getId());
+            ligne.setNomProduit(produit.getNom());
+            ligne.setQuantite(item.getQuantite());
+            ligne.setPrixUnitaireFcfa(produit.getPrixFcfa());
+            ligneCommandeRepository.save(ligne);
+            total += produit.getPrixFcfa() * item.getQuantite();
+        }
+        commande.setMontantTotalFcfa(total + FRAIS_LIVRAISON_FCFA);
+        commandeRepository.save(commande);
+        panierItemRepository.deleteByUtilisateurId(utilisateurId);
+
+        Map<String, Object> corps = new java.util.HashMap<>(Map.of(
+                "moyenPaiement", requete.moyenPaiement(),
+                "montantFcfa", total + FRAIS_LIVRAISON_FCFA,
+                "typeObjet", "COMMANDE",
+                "referenceId", String.valueOf(commande.getId())
+        ));
+        if (requete.telephonePayeur() != null) corps.put("telephonePayeur", requete.telephonePayeur());
+        return webClientBuilder.build().post()
+                .uri(UrlInterne.base() + "/api/paiement/transactions")
+                .header("X-User-Id", userId)
+                .bodyValue(corps)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
+    }
+
+    public List<Commande> mesCommandes(Long utilisateurId) {
+        return commandeRepository.findByUtilisateurIdOrderByDateCommandeDesc(utilisateurId);
+    }
+
+    public List<Commande> toutesLesCommandes() {
+        return commandeRepository.findAllByOrderByDateCommandeDesc();
+    }
+
+    public LigneCommande modifierStatutLivraison(Long ligneId, String statutBrut) {
+        LigneCommande ligne = ligneCommandeRepository.findById(ligneId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Ligne de commande introuvable."));
+        StatutLivraison statut;
+        try {
+            statut = StatutLivraison.valueOf(statutBrut);
+        } catch (Exception e) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Statut de livraison invalide.");
+        }
+        ligne.setStatutLivraison(statut);
+        return ligneCommandeRepository.save(ligne);
+    }
+
+    public List<LigneCommande> lignesDeCommande(Long commandeId) {
+        return ligneCommandeRepository.findByCommandeId(commandeId);
+    }
+}
